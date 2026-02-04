@@ -409,6 +409,29 @@ function closeSuccessPopup(){
   window.scrollTo(0,0);
 }
 
+function updateCasteOptions() {
+  const religionSelect = document.getElementById("religion");
+  const casteSelect = document.getElementById("caste");
+
+  // reset caste dropdown
+  casteSelect.innerHTML = `<option value="">Select</option>`;
+
+  const religion = religionSelect.value;
+
+  if (!religion || !casteData[religion]) {
+    casteSelect.innerHTML = `<option value="">Select Religion First</option>`;
+    return;
+  }
+
+  casteData[religion].forEach(caste => {
+    const opt = document.createElement("option");
+    opt.value = caste;
+    opt.textContent = caste;
+    casteSelect.appendChild(opt);
+  });
+}
+
+
 
 
 
@@ -520,9 +543,7 @@ function closeSuccessPopup(){
     <select name="Year" required><option value="">Year</option></select>
   </div>
 
-  <label>Age</label>
-  <input name="Age" type="number" min="18" max="100" required>
-
+  
   <label>Gender</label>
   <select name="Gender" required>
     <option value="">Select</option>
@@ -769,7 +790,7 @@ function closeSuccessPopup(){
       <option>Wayanad</option>
       <option>Kannur</option>
       <option>Kasaragod</option>
-      <option>India</option>
+      <option>Outside Kerala</option>
     </select>
   </div>
 
@@ -922,7 +943,7 @@ function closeSuccessPopup(){
 
   <div class="footer-text" style="margin-top:18px;font-size:13px;color:#555;line-height:1.4;">
     കെ മാരി.കോം കേരളത്തിലെ ഏറ്റവും ചിലവ് കുറഞ്ഞ മാട്രിമോണി വെബ്സൈറ്റ് <br>
-    <strong>Contact: Instagram/SuneerParmbil</strong>
+    <strong></strong>
   </div>
 </div>
 
@@ -958,78 +979,151 @@ function closeSuccessPopup(){
 
         <p style="color:#007bff; text-align:center; font-weight:bold;">Only listed fields are editable.</p>
 
-        <label>Name</label>
-        <input name="Name" id="editName" required>
-        
-        <label>Date of Birth (Not Editable)</label>
-        <input name="Date of Birth" id="editDob" disabled style="background:#eee; color:#666;">
+        <!-- BASIC -->
+  <label>Name</label>
+  <input name="Name" id="editName" required>
 
-        <label>Height</label>
-        <input name="Height" id="editHeight">
-        
-        <label>Disability Details</label>
-        <select name="Disability Details" id="editDisability" required>
-            <option value="">Select</option>
-            <option>Deaf</option>
-      <option>Hearing Impaired</option>
-      <option>Blind</option>
-      <option>Low Vision</option>
-      <option>Sexual Issue</option>
-      <option>Health Issue</option>
-      <option>Eczema</option>
-      <option>Skin Problem</option>
-      <option>Height Problem</option>
-      <option>Physical Disabilities</option>
-      <option>Learning Disabilities</option>
-      <option>MR</option>
-      <option>Other Disabilities</option>
-        </select>
+  <label>Your Phone Number (Not Editable)</label>
+  <input id="editPhone" disabled style="background:#eee">
 
-        <label>Education</label>
-        <input name="Education" id="editEducation" required>
+  <label>Date of Birth (Not Editable)</label>
+  <input id="editDob" disabled style="background:#eee">
 
-        <label>Job</label>
-        <input name="Job" id="editJob">
+  <label>Gender (Not Editable)</label>
+  <input id="editGender" disabled style="background:#eee">
 
-        <label>Marital Status</label>
-        <select name="Marital Status" id="editMaritalStatus" required>
-            <option value="">Select</option>
-            <option>Unmarried</option>
-            <option>Divorced</option>
-            <option>Nikah Divorced</option>
-        </select>
-        
-        <label>Full Address</label>
-        <textarea name="Full Address" id="editAddress" required></textarea>
+  
 
-        <label>District</label>
-        <select name="District" id="editDistrict" required>
-            <option value="">Select District</option>
-            <option>Thiruvananthapuram</option>
-            <option>Kollam</option>
-            <option>Pathanamthitta</option>
-            <option>Alappuzha</option>
-            <option>Kottayam</option>
-            <option>Idukki</option>
-            <option>Ernakulam</option>
-            <option>Thrissur</option>
-            <option>Palakkad</option>
-            <option>Malappuram</option>
-            <option>Kozhikode</option>
-            <option>Wayanad</option>
-            <option>Kannur</option>
-            <option>Kasaragod</option>
-            <option>India</option>
-        </select>
+  <label>Height</label>
+  <input name="Height" id="editHeight">
 
-        <label>Contact Number 1</label>
-        <input name="Contact Number 1" id="editContact1" required>
+  <!-- RELIGION / CASTE (LOCKED) -->
+  <label>Religion (Not Editable)</label>
+  <input id="editReligion" disabled style="background:#eee">
 
-        <label>Contact Number 2</label>
-        <input name="Contact Number 2" id="editContact2">
-        
-        <label>About Me</label>
-        <textarea name="About Me" id="editAboutMe"></textarea>
+  <label>Caste / Sect (Not Editable)</label>
+  <input id="editCaste" disabled style="background:#eee">
+
+  <!-- MARITAL -->
+  <label>Marital Status</label>
+  <select name="Marital Status" id="editMaritalStatus" required>
+    <option value="">Select</option>
+    <option>Never Married</option>
+    <option>Divorced</option>
+    <option>Widowed</option>
+    <option>Separated</option>
+  </select>
+
+  <label>Number of Children</label>
+  <input type="number" name="Number of Children" id="editChildren" min="0">
+
+  <label>Children Living With</label>
+  <select name="Children Living With" id="editChildrenWith">
+    <option value="">Select</option>
+    <option>Self</option>
+    <option>Ex Partner</option>
+    <option>Relatives</option>
+  </select>
+
+  <!-- PHYSICAL -->
+  <label>Body Type</label>
+  <select name="Body Type" id="editBodyType" required>
+    <option value="">Select</option>
+    <option>Slim</option>
+    <option>Average</option>
+    <option>Athletic</option>
+    <option>Heavy</option>
+  </select>
+
+  <label>Complexion</label>
+  <select name="Complexion" id="editComplexion" required>
+    <option value="">Select</option>
+    <option>Very Fair</option>
+    <option>Fair</option>
+    <option>Wheatish</option>
+    <option>Wheatish Medium</option>
+    <option>Dark</option>
+  </select>
+
+  <!-- DISABILITY -->
+  <label>Disability Details</label>
+  <select name="Disability Details" id="editDisability">
+    <option>None</option>
+    <option>Deaf</option>
+    <option>Hearing Impaired</option>
+    <option>Blind</option>
+    <option>Low Vision</option>
+    <option>Physical Disabilities</option>
+    <option>Learning Disabilities</option>
+    <option>Health Issue</option>
+    <option>Other</option>
+  </select>
+
+  <!-- EDUCATION & JOB -->
+  <label>Education</label>
+  <input name="Education" id="editEducation" required>
+
+  <label>Job</label>
+  <input name="Job" id="editJob" required>
+
+  <!-- FAMILY -->
+  <label>Family Type</label>
+  <select name="Family Type" id="editFamilyType">
+    <option>Nuclear</option>
+    <option>Joint</option>
+  </select>
+
+  <label>Number of Brothers</label>
+  <input type="number" name="Brothers" id="editBrothers" min="0">
+
+  <label>Number of Sisters</label>
+  <input type="number" name="Sisters" id="editSisters" min="0">
+
+  <label>Family Status</label>
+  <select name="Family Status" id="editFamilyStatus">
+    <option>Poor</option>
+    <option>Middle Class</option>
+    <option>Upper Middle</option>
+    <option>Rich</option>
+  </select>
+
+  <!-- ADDRESS -->
+  <label>Native Place</label>
+  <input name="Native Place" id="editNativePlace" required>
+
+  <label>Full Address</label>
+  <textarea name="Full Address" id="editAddress" required></textarea>
+
+  <label>District</label>
+  <select name="District" id="editDistrict" required>
+    <option value="">Select</option>
+    <option>Thiruvananthapuram</option>
+    <option>Kollam</option>
+    <option>Pathanamthitta</option>
+    <option>Alappuzha</option>
+    <option>Kottayam</option>
+    <option>Idukki</option>
+    <option>Ernakulam</option>
+    <option>Thrissur</option>
+    <option>Palakkad</option>
+    <option>Malappuram</option>
+    <option>Kozhikode</option>
+    <option>Wayanad</option>
+    <option>Kannur</option>
+    <option>Kasaragod</option>
+    <option>Outside Kerala</option>
+  </select>
+
+  <!-- CONTACT -->
+  <label>Contact Number 1</label>
+  <input name="Contact Number 1" id="editContact1" required>
+
+  <label>Contact Number 2</label>
+  <input name="Contact Number 2" id="editContact2">
+
+  <!-- ABOUT -->
+  <label>About Me</label>
+  <textarea name="About Me" id="editAboutMe"></textarea>
 
         <div class="btn-group" style="margin-top:20px; display:flex; gap:10px; justify-content:center;">
             <button type="button" onclick="updateProfile()" style="background:#28a745;">💾 Update Profile</button>
@@ -1168,7 +1262,7 @@ modal.addEventListener('click', () => {
   let csvReady = false;
 
   /* ========== CONFIG ========== */
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxaVM7NYrs9nA3jjvRi3SBQqdO_XavLcGK91MX5kF13uxg8RaA597Yq_5N4xzdV1frcng/exec"; // <-- set your script URL
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzl0ia1Qa3CdDTyKvB-gOOyCiy9QfcNrhI_73suIokCcCige2l5XRZ4cO_aw19xHjkysg/exec"; // <-- set your script URL
   /* 🔐 GLOBAL SESSION ID (ONE PLACE ONLY) */
 let sessionId = localStorage.getItem("activeSession");
 
@@ -1740,30 +1834,41 @@ card.innerHTML = `
   ">
 
     <div><b>Name</b><br>${p.Name || ''}</div>
-    <div><b>Age</b><br>${calculateAge(p['Date of Birth']) || 'N/A'}</div>
+    <div><b>Age</b><br>${calculateAge(p['Date of Birth']) || p.Age || 'N/A'}</div>
 
     <div><b>Gender</b><br>${p.Gender || ''}</div>
     <div><b>Height</b><br>${p.Height || ''}</div>
 
     <div><b>Religion</b><br>${p.Religion || ''}</div>
-    <div><b>Caste</b><br>${p.Caste || ''}</div>
+    <div><b>Caste / Sect</b><br>${p.Caste || ''}</div>
 
     <div><b>Marital Status</b><br>${p['Marital Status'] || ''}</div>
+    <div><b>Children</b><br>${p['Number of Children'] || '0'}</div>
+    <div><b>Family Type</b><br>${p["Family Type"] || ""}</div>
+
+<div><b>Family Status</b><br>${p["Family Status"] || ""}</div>
+
+<div><b>Brothers</b><br>${p["Brothers"] || "0"}</div>
+
+<div><b>Sisters</b><br>${p["Sisters"] || "0"}</div>
+
+    
+
     <div><b>Body Type</b><br>${p['Body Type'] || ''}</div>
+    <div><b>Complexion</b><br>${p.Complexion || ''}</div>
 
-    <div><b>Disability</b><br>${p['Disability Details'] || ''}</div>
     <div><b>Education</b><br>${p.Education || ''}</div>
-
     <div><b>Job</b><br>${p.Job || ''}</div>
-    <div><b>District</b><br>${p.District || ''}</div>
 
+    <div><b>District</b><br>${p.District || ''}</div>
     <div><b>Native Place</b><br>${p['Native Place'] || ''}</div>
+
   </div>
 
-  <!-- 🔒 ADDRESS -->
+  <!-- 🔒 FULL ADDRESS -->
   ${isLoggedUserPremium() ? `
     <div style="
-      margin-top:10px;
+      margin-top:12px;
       background:#fff7ed;
       padding:10px;
       border-radius:10px;
@@ -1775,7 +1880,7 @@ card.innerHTML = `
     </div>
   ` : `
     <div style="
-      margin-top:10px;
+      margin-top:12px;
       padding:12px;
       border-radius:10px;
       background:#f1f5f9;
@@ -1791,7 +1896,7 @@ card.innerHTML = `
     </div>
   `}
 
-  <!-- ABOUT (always visible) -->
+  <!-- ABOUT -->
   <div style="
     margin-top:12px;
     background:#f8fafc;
@@ -1799,17 +1904,11 @@ card.innerHTML = `
     border-radius:10px;
     font-size:14px;
   ">
-    <b>About</b><br>
+    <b>About Me</b><br>
     ${p['About Me'] || ''}
   </div>
 
-  <!-- 📞 CONTACT BOXES -->
-  <div style="
-    display:flex;
-    gap:10px;
-    margin-top:12px;
-  ">
-    <!-- 📞 CONTACT DETAILS -->
+  <!-- 📞 CONTACT -->
   ${isLoggedUserPremium() ? `
     <div style="display:flex;gap:10px;margin-top:12px;">
       ${p['Contact Number 1'] ? `
@@ -1859,7 +1958,7 @@ card.innerHTML = `
     ">
       🔒 Contact details hidden<br>
       <button onclick="startPremiumPayment()"
-        style="margin-top:6px;background:#ffd700;border:none;
+        style="margin-top:6px;background:#FF0000;border:none;
         padding:8px 18px;border-radius:20px;font-weight:bold;">
         💎 Upgrade to Premium ₹599
       </button>
@@ -1942,7 +2041,7 @@ function showMyProfile(profile){
          color:#FF0000;
          letter-spacing:0.5px;
        ">
-         www.dmarry.online
+         www.kmarry.in
        </div>`
     );
   }
@@ -1958,25 +2057,32 @@ function showMyProfile(profile){
       line-height:1.4;
     ">
 
-      <div><b>Name</b><br>${escapeHtml(profile.Name || '')}</div>
-      <div><b>Age</b><br>${calculateAge(profile['Date of Birth']) || 'N/A'}</div>
+      <div><b>Name</b><br>${escapeHtml(profile["Name"] || "")}</div>
+      <div><b>Age</b><br>${calculateAge(profile["Date of Birth"]) || "N/A"}</div>
 
-      <div><b>Gender</b><br>${escapeHtml(profile.Gender || '')}</div>
-      <div><b>Height</b><br>${escapeHtml(profile.Height || '')}</div>
+      <div><b>Gender</b><br>${escapeHtml(profile["Gender"] || "")}</div>
+      <div><b>Height</b><br>${escapeHtml(profile["Height"] || "")}</div>
 
-      <div><b>Religion</b><br>${escapeHtml(profile.Religion || '')}</div>
-      <div><b>Caste</b><br>${escapeHtml(profile.Caste || '')}</div>
+      <div><b>Religion</b><br>${escapeHtml(profile["Religion"] || "")}</div>
+      <div><b>Caste / Sect</b><br>${escapeHtml(profile["Caste"] || "")}</div>
 
-      <div><b>Marital Status</b><br>${escapeHtml(profile["Marital Status"] || '')}</div>
-      <div><b>Body Type</b><br>${escapeHtml(profile["Body Type"] || '')}</div>
+      <div><b>Marital Status</b><br>${escapeHtml(profile["Marital Status"] || "")}</div>
+      <div><b>Children</b><br>${escapeHtml(profile["Number of Children"] || "0")}</div>
+      <div><b>Family Type</b><br>${escapeHtml(profile["Family Type"] || "")}</div>
+<div><b>Family Status</b><br>${escapeHtml(profile["Family Status"] || "")}</div>
 
-      <div><b>Disability</b><br>${escapeHtml(profile["Disability Details"] || '')}</div>
-      <div><b>Education</b><br>${escapeHtml(profile.Education || '')}</div>
+<div><b>Brothers</b><br>${escapeHtml(profile["Brothers"] || "0")}</div>
+<div><b>Sisters</b><br>${escapeHtml(profile["Sisters"] || "0")}</div>
 
-      <div><b>Job</b><br>${escapeHtml(profile.Job || '')}</div>
-      <div><b>District</b><br>${escapeHtml(profile.District || '')}</div>
 
-      <div><b>Native Place</b><br>${escapeHtml(profile["Native Place"] || '')}</div>
+      <div><b>Body Type</b><br>${escapeHtml(profile["Body Type"] || "")}</div>
+      <div><b>Complexion</b><br>${escapeHtml(profile["Complexion"] || "")}</div>
+
+      <div><b>Education</b><br>${escapeHtml(profile["Education"] || "")}</div>
+      <div><b>Job</b><br>${escapeHtml(profile["Job"] || "")}</div>
+
+      <div><b>District</b><br>${escapeHtml(profile["District"] || "")}</div>
+      <div><b>Native Place</b><br>${escapeHtml(profile["Native Place"] || "")}</div>
       <div><b>Date of Birth</b><br>${escapeHtml(profile["Date of Birth"] || '')}</div>
 
     </div>
@@ -2015,28 +2121,47 @@ function showMyProfile(profile){
 
 
 /* ✏️ EDIT PROFILE (NEW LOGIC) */
-function editProfile() {
-  if (!loggedProfile) { alert('Please login first'); return; }
-  
-  // 1. ഡാറ്റ ഫോമിലേക്ക് ലോഡ് ചെയ്യുന്നു
-  document.getElementById('editName').value = loggedProfile.Name || '';
-  document.getElementById('editDob').value = loggedProfile['Date of Birth'] || ''; // DOB is not editable
-  document.getElementById('editHeight').value = loggedProfile.Height || '';
-  document.getElementById('editDisability').value = loggedProfile['Disability Details'] || '';
-  document.getElementById('editEducation').value = loggedProfile.Education || '';
-  document.getElementById('editJob').value = loggedProfile.Job || '';
-  document.getElementById('editMaritalStatus').value = loggedProfile['Marital Status'] || '';
-  document.getElementById('editAddress').value = loggedProfile['Full Address'] || '';
-  document.getElementById('editDistrict').value = loggedProfile.District || '';
-  document.getElementById('editContact1').value = loggedProfile['Contact Number 1'] || '';
-  document.getElementById('editContact2').value = loggedProfile['Contact Number 2'] || '';
-  document.getElementById('editAboutMe').value = loggedProfile['About Me'] || '';
-  
-  document.getElementById('editStatus').textContent = "";
-  
-  // 2. എഡിറ്റ് പേജിലേക്ക് പോകുന്നു
-  showPage('pageEdit');
+function editProfile(){
+  if(!loggedProfile) return;
+
+  document.getElementById("editName").value = loggedProfile.Name || "";
+  document.getElementById("editPhone").value = loggedProfile["Your Phone Number"] || "";
+  document.getElementById("editDob").value = loggedProfile["Date of Birth"] || "";
+  document.getElementById("editGender").value = loggedProfile.Gender || "";
+  document.getElementById("editAge").value = loggedProfile.Age || "";
+  document.getElementById("editHeight").value = loggedProfile.Height || "";
+  document.getElementById("editReligion").value = loggedProfile.Religion || "";
+  document.getElementById("editCaste").value = loggedProfile.Caste || "";
+
+  document.getElementById("editMaritalStatus").value = loggedProfile["Marital Status"] || "";
+  document.getElementById("editChildren").value = loggedProfile["Number of Children"] || "";
+  document.getElementById("editChildrenWith").value = loggedProfile["Children Living With"] || "";
+
+  document.getElementById("editBodyType").value = loggedProfile["Body Type"] || "";
+  document.getElementById("editComplexion").value = loggedProfile.Complexion || "";
+  document.getElementById("editDisability").value = loggedProfile["Disability Details"] || "";
+
+  document.getElementById("editEducation").value = loggedProfile.Education || "";
+  document.getElementById("editJob").value = loggedProfile.Job || "";
+
+  document.getElementById("editFamilyType").value = loggedProfile["Family Type"] || "";
+  document.getElementById("editBrothers").value = loggedProfile.Brothers || "";
+  document.getElementById("editSisters").value = loggedProfile.Sisters || "";
+  document.getElementById("editFamilyStatus").value = loggedProfile["Family Status"] || "";
+
+  document.getElementById("editNativePlace").value = loggedProfile["Native Place"] || "";
+  document.getElementById("editAddress").value = loggedProfile["Full Address"] || "";
+  document.getElementById("editDistrict").value = loggedProfile.District || "";
+
+  document.getElementById("editContact1").value = loggedProfile["Contact Number 1"] || "";
+  document.getElementById("editContact2").value = loggedProfile["Contact Number 2"] || "";
+  document.getElementById("editAboutMe").value = loggedProfile["About Me"] || "";
+
+  showPage("pageEdit");
 }
+
+ 
+
  
 /* 💾 UPDATE PROFILE (NEW LOGIC) */
 /* 💾 UPDATE PROFILE — FINAL SUPER FAST VERSION */
@@ -2052,13 +2177,7 @@ async function updateProfile() {
   const status = document.getElementById('editStatus');
   const form = document.getElementById('editForm');
 
-  if (!form.checkValidity()) {
-      status.style.color = 'red';
-      status.textContent = 'Please fill all required fields.';
-      hideLoadingPopup();
-      return;
-  }
-
+  
   // ⭐⭐ Correct: Use ONLY FormData (Apps Script needs this)
   const fd = new FormData(form);
   fd.append("action", "editProfile");
@@ -2109,7 +2228,6 @@ async function updateProfile() {
       hideLoadingPopup();
   }
 }
-
 
 
 /* Change profile photo */
@@ -2282,7 +2400,6 @@ async function proceedDeleteProfile(){
     alert("Network error");
   }
 }
-
 
   /* ========== UTILS ========== */
   function calculateAge(dobString){
@@ -2531,27 +2648,144 @@ function displayInterestProfiles(listType = 'received'){
         }
 
         card.innerHTML = `
-            ${photoHtml}
-            <div class="info">
-                <b>Name:</b> ${p.Name||''}<br>
-                <b>Age:</b> ${calculateAge(p['Date of Birth']) || 'N/A'}<br>
-                <b>Gender:</b> ${p.Gender||''}<br>
-                <b>Religion:</b> ${p.Religion||''}<br>
-                <b>Caste:</b> ${p.Caste||''}<br>
-                <b>Disability:</b> ${p['Disability Details']||''}<br>
-                <b>Education:</b> ${p.Education||''}<br>
-                <b>Job:</b> ${p.Job||''}<br>
-                <b>Marital Status:</b> ${p['Marital Status']||''}<br>
-                <b>Full Address:</b> ${p['Full Address']||''}<br>
-                <b>District:</b> ${p.District||''}<br>
-                <b>Contact 1:</b> ${p['Contact Number 1']||''}<br>
-                <b>Contact 2:</b> ${p['Contact Number 2']||''}<br>
-                <b>About Me:</b> ${p['About Me']||''}<br>
-            </div>
-            <div style="text-align:center; margin-top:10px;">
-                ${actionButtons}
-            </div>
-        `;
+  ${photoHtml}
+
+  <div style="
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    font-size:14px;
+    margin-top:12px;
+  ">
+
+    <div><b>Name</b><br>${escapeHtml(p["Name"] || "")}</div>
+    <div><b>Age</b><br>${calculateAge(p["Date of Birth"]) || "N/A"}</div>
+
+    <div><b>Gender</b><br>${escapeHtml(p["Gender"] || "")}</div>
+    <div><b>Height</b><br>${escapeHtml(p["Height"] || "")}</div>
+
+    <div><b>Religion</b><br>${escapeHtml(p["Religion"] || "")}</div>
+    <div><b>Caste / Sect</b><br>${escapeHtml(p["Caste"] || "")}</div>
+
+    <div><b>Marital Status</b><br>${escapeHtml(p["Marital Status"] || "")}</div>
+    <div><b>Children</b><br>${escapeHtml(p["Number of Children"] || "0")}</div>
+
+    <div><b>Education</b><br>${escapeHtml(p["Education"] || "")}</div>
+    <div><b>Job</b><br>${escapeHtml(p["Job"] || "")}</div>
+
+    <div><b>Family Type</b><br>${escapeHtml(p["Family Type"] || "")}</div>
+    <div><b>Family Status</b><br>${escapeHtml(p["Family Status"] || "")}</div>
+
+    <div><b>District</b><br>${escapeHtml(p["District"] || "")}</div>
+    <div><b>Native Place</b><br>${escapeHtml(p["Native Place"] || "")}</div>
+  </div>
+
+  <!-- 🔒 FULL ADDRESS -->
+  ${isLoggedUserPremium() ? `
+    <div style="
+      margin-top:12px;
+      background:#fff7ed;
+      padding:10px;
+      border-radius:10px;
+      font-size:14px;
+      border:1px solid #fed7aa;
+    ">
+      <b>Full Address</b><br>
+      ${escapeHtml(p["Full Address"] || "")}
+    </div>
+  ` : `
+    <div style="
+      margin-top:12px;
+      padding:12px;
+      border-radius:10px;
+      background:#f1f5f9;
+      text-align:center;
+      font-size:14px;
+    ">
+      🔒 Address hidden for free users<br>
+      <button onclick="startPremiumPayment()"
+        style="
+          margin-top:6px;
+          background:#ffd700;
+          border:none;
+          padding:6px 14px;
+          border-radius:20px;
+          font-weight:bold;
+        ">
+        💎 Upgrade to Premium
+      </button>
+    </div>
+  `}
+
+  <!-- 📞 CONTACT -->
+  ${isLoggedUserPremium() ? `
+    <div style="display:flex;gap:10px;margin-top:12px;">
+      ${p["Contact Number 1"] ? `
+        <a href="tel:${p["Contact Number 1"]}"
+           style="
+             flex:1;
+             text-decoration:none;
+             background:#e6fffa;
+             border:2px solid #00b050;
+             color:#065f46;
+             padding:12px;
+             text-align:center;
+             border-radius:10px;
+             font-size:16px;
+             font-weight:bold;
+           ">
+          📞 ${p["Contact Number 1"]}
+        </a>
+      ` : ''}
+
+      ${p["Contact Number 2"] ? `
+        <a href="tel:${p["Contact Number 2"]}"
+           style="
+             flex:1;
+             text-decoration:none;
+             background:#e0f2fe;
+             border:2px solid #0284c7;
+             color:#075985;
+             padding:12px;
+             text-align:center;
+             border-radius:10px;
+             font-size:16px;
+             font-weight:bold;
+           ">
+          📞 ${p["Contact Number 2"]}
+        </a>
+      ` : ''}
+    </div>
+  ` : `
+    <div style="
+      margin-top:12px;
+      padding:12px;
+      border-radius:10px;
+      background:#f8fafc;
+      text-align:center;
+      font-size:14px;
+    ">
+      🔒 Contact details hidden<br>
+      <button onclick="startPremiumPayment()"
+        style="
+          margin-top:6px;
+          background:#ff0000;
+          border:none;
+          padding:8px 18px;
+          border-radius:20px;
+          font-weight:bold;
+        ">
+        💎 Upgrade to Premium ₹599
+      </button>
+    </div>
+  `}
+
+  <div style="text-align:center;margin-top:14px;">
+    ${actionButtons || ""}
+  </div>
+`;
+
+
 
         resultsDiv.appendChild(card);
     });
@@ -2887,6 +3121,20 @@ function stopLoginLoader(){
   if (dots) dots.style.display = "none";
 }
 
+// 🔄 REFRESH PROFILE UI (COMMON FOR EDIT / PHOTO / DELETE)
+async function refreshProfileUI() {
+
+  // 1️⃣ Reload CSV (latest data)
+  await reloadAllProfiles();
+
+  // 2️⃣ Refresh loggedProfile object
+  refreshLoggedProfile();
+
+  // 3️⃣ Repaint My Profile UI
+  showMyProfile(loggedProfile);
+
+  console.log("✅ Profile UI refreshed");
+}
 
 
 function refreshLoggedProfile() {

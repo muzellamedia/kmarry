@@ -150,7 +150,7 @@
   align-items:center;
   height:100vh;
   width:100%;
-  background:url('https://lh3.googleusercontent.com/d/19haZGcA4cuy91BrIzz8r3_283-_yqP9P')
+  background:url('https://lh3.googleusercontent.com/d/1qxE8D7quWxDMuZUvmbo_gdWV0zH4QWHl')
              no-repeat center center / cover;
 }
 
@@ -167,8 +167,19 @@
   #pageLogin{
     display:flex;
     align-items:center;
+    justify-content:center;   /* ✅ CENTER horizontally */
+    background:url('https://lh3.googleusercontent.com/d/1y32Yv9BtQsuP8D2MCK8FFR780e3bugtg')
+               no-repeat center center / cover;
+  }
 
-    background:url('https://lh3.googleusercontent.com/d/10AWdzgvIEY5zIpVqPx5BMB_ukOt9dupn')
+  #loginBox{
+    margin:0 auto;            /* ✅ CENTER */
+    border-radius:0;
+  }
+}
+
+
+    background:url('https://lh3.googleusercontent.com/d/1y32Yv9BtQsuP8D2MCK8FFR780e3bugtg')
                no-repeat center center / cover;
   }
 
@@ -891,45 +902,57 @@ function updateCasteOptions() {
        style="background:#f9f9f9;border-radius:10px;padding:15px;margin-bottom:20px;text-align:left;box-shadow:0 0 6px rgba(0,0,0,0.1);">
   </div>
 
-  <!-- Action Buttons Grid -->
-  <div class="actions-grid" 
-       style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px;">
-    
-    <button class="action-box" onclick="editProfile()" 
-            style="background:#007bff;color:#fff;border:none;border-radius:12px;padding:15px 10px;font-weight:bold;
-                   cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.2);">
-      ✏️<br>Edit Profile
-    </button>
-    
-    <button class="action-box" onclick="changePhoto()" 
-            style="background:#17a2b8;color:#fff;border:none;border-radius:12px;padding:15px 10px;font-weight:bold;
-                   cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.2);">
-      📸<br>Change Photo
-    </button>
-    
-    <button class="action-box" onclick="deletePhoto()" 
-            style="background:#ffc107;color:#000;border:none;border-radius:12px;padding:15px 10px;font-weight:bold;
-                   cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.2);">
-      🗑️<br>Delete Photo
-    </button>
-    
-    <button class="action-box" onclick="deleteProfile()" 
-            style="background:#dc3545;color:#fff;border:none;border-radius:12px;padding:15px 10px;font-weight:bold;
-                   cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.2);">
-      ❌<br>Delete Profile
-      <div class="actions-grid" 
-       style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px;">
-    
-    <button class="action-box" onclick="showInterestList('received')" 
-            style="background:#00695c;color:#fff;border-radius:12px;padding:15px 10px;font-weight:bold;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.2);">
-      📥<br>Received Interests
-    </button>
+  <div class="actions-grid"
+     style="display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+            gap:12px;
+            margin-bottom:20px;">
 
-    <button class="action-box" onclick="showInterestList('accepted')" 
-            style="background:#007bff;color:#fff;border-radius:12px;padding:15px 10px;font-weight:bold;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.2);">
-      🤝<br>Accepted Interests
-    </button>
-  </div>
+  <button class="action-box" onclick="editProfile()"
+    style="background:#007bff;color:#fff;border:none;
+           padding:18px 10px;font-weight:bold;">
+    ✏️<br>Edit Profile
+  </button>
+
+  <button class="action-box" onclick="changePhoto()"
+    style="background:#17a2b8;color:#fff;border:none;
+           padding:18px 10px;font-weight:bold;">
+    📸<br>Change Photo
+  </button>
+
+  <button class="action-box" onclick="deletePhoto()"
+    style="background:#ffc107;color:#000;border:none;
+           padding:18px 10px;font-weight:bold;">
+    🗑️<br>Delete Photo
+  </button>
+
+  <button class="action-box" onclick="deleteProfile()"
+    style="background:#dc3545;color:#fff;border:none;
+           padding:18px 10px;font-weight:bold;">
+    ❌<br>Delete Profile
+  </button>
+
+  <button class="action-box" onclick="showInterestList('received')"
+    style="background:#00695c;color:#fff;border:none;
+           padding:18px 10px;font-weight:bold;">
+    📥<br>Received Interests
+  </button>
+
+  <button class="action-box" onclick="showInterestList('accepted')"
+    style="background:#007bff;color:#fff;border:none;
+           padding:18px 10px;font-weight:bold;">
+    🤝<br>Accepted Interests
+  </button>
+
+  <!-- ✅ WHATSAPP CUSTOMER CARE -->
+  <button class="action-box"
+    onclick="window.open('https://wa.me/919645565177','_blank')"
+    style="background:#25D366;color:#fff;border:none;
+           padding:18px 10px;font-weight:bold;">
+    💬<br>CUSTOMER CARE
+  </button>
+
+</div>
 
   <div id="interestListContainer" style="margin-top:20px; display:none;">
     <h3 id="interestListHeading" style="text-align:center; color:#0056b3; margin-bottom:15px;"></h3>
@@ -2122,13 +2145,18 @@ function showMyProfile(profile){
 
 /* ✏️ EDIT PROFILE (NEW LOGIC) */
 function editProfile(){
-  if(!loggedProfile) return;
+  console.log("EDIT PROFILE CLICKED");   // 🔥 add this line
+
+  if(!loggedProfile){
+    alert("No logged profile");
+    return;
+  }
 
   document.getElementById("editName").value = loggedProfile.Name || "";
   document.getElementById("editPhone").value = loggedProfile["Your Phone Number"] || "";
   document.getElementById("editDob").value = loggedProfile["Date of Birth"] || "";
   document.getElementById("editGender").value = loggedProfile.Gender || "";
-  document.getElementById("editAge").value = loggedProfile.Age || "";
+  
   document.getElementById("editHeight").value = loggedProfile.Height || "";
   document.getElementById("editReligion").value = loggedProfile.Religion || "";
   document.getElementById("editCaste").value = loggedProfile.Caste || "";
@@ -2274,25 +2302,41 @@ function changePhoto() {
           status.style.color = 'green';
           status.textContent = 'Photo updated. Refreshing...';
 
-          // ⭐⭐⭐ MAIN FIX — SUPER FAST LIVE UPDATE ⭐⭐⭐
-          await reloadAllProfiles();
+         // ⭐⭐⭐ MAIN FIX — FORCE IMAGE REFRESH ⭐⭐⭐
+await reloadAllProfiles();
 refreshLoggedProfile();
-localStorage.setItem("loggedProfile", JSON.stringify(loggedProfile));
+
+localStorage.setItem(
+  "loggedProfile",
+  JSON.stringify(loggedProfile)
+);
+
+// 🔥 FORCE IMAGE CACHE CLEAR
+const photoEl = document.getElementById("myProfilePhoto");
+
+const freshUrl = convertDriveLink(
+  loggedProfile["Photo Link"] || loggedProfile["Upload Your Photo"] || ""
+);
+
+// hard reset for stubborn browsers
+photoEl.src = "";
+setTimeout(() => {
+  photoEl.src = freshUrl;
+}, 50);
+
+// repaint profile details also
 showMyProfile(loggedProfile);
-
-
-        } else {
+} else {
           status.style.color = 'red';
           status.textContent = 'Failed: ' + text;
         }
 
       } catch (err) {
+        hideLoadingPopup();
         status.style.color = 'red';
         status.textContent = 'Network error';
         console.error(err);
       }
-
-      hideLoadingPopup();
     };
 
     reader.readAsDataURL(file);

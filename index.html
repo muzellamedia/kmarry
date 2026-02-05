@@ -340,6 +340,7 @@
   </div>
 </div>
 
+	  
 <!-- 🔵 GLOBAL LOADING POPUP -->
 <div id="loadingPopup" style="
   display:none;
@@ -396,6 +397,72 @@
     </button>
   </div>
 </div>
+<!-- 📜 TERMS & CONDITIONS MODAL -->
+<div id="termsModal" style="
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.85);
+  z-index:100000;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+">
+
+  <div style="
+    background:#fff;
+    max-width:600px;
+    width:100%;
+    max-height:80vh;
+    overflow-y:auto;
+    border-radius:12px;
+    padding:20px;
+    font-size:14px;
+    line-height:1.6;
+    color:#333;
+  ">
+
+    <h3 style="text-align:center;margin-bottom:15px;">
+      📜 Terms & Conditions
+    </h3>
+
+    <p><b>1. സേവനത്തിന്റെ ഉദ്ദേശ്യം</b><br>
+    kmarry.in ഒരു വിവാഹ പരിചയ പ്ലാറ്റ്‌ഫോമാണ്.</p>
+
+    <p><b>2. വിവരങ്ങളുടെ ഉത്തരവാദിത്വം</b><br>
+    ഉപയോക്താവ് നൽകുന്ന വിവരങ്ങൾ സത്യസന്ധമായിരിക്കണം.</p>
+
+    <p><b>3. പ്രൊഫൈൽ സുരക്ഷ</b><br>
+    നിങ്ങളുടെ ലോഗിൻ വിവരങ്ങൾ മറ്റാരുമായി പങ്കുവയ്ക്കരുത്.</p>
+
+    <p><b>4. നിയമപരമായ ഉത്തരവാദിത്വം</b><br>
+    ഈ വെബ്സൈറ്റ് വഴി ഉണ്ടാകുന്ന വിവാഹ തീരുമാനങ്ങൾക്ക്
+    kmarry.in ഉത്തരവാദിയല്ല.</p>
+
+    <p><b>5. ദുരുപയോഗം</b><br>
+    വ്യാജ പ്രൊഫൈൽ / തെറ്റായ വിവരങ്ങൾ കണ്ടെത്തിയാൽ
+    പ്രൊഫൈൽ ഡിലീറ്റ് ചെയ്യും.</p>
+
+    <p><b>6. ഡാറ്റ ഉപയോഗം</b><br>
+    ഉപയോക്തൃ വിവരങ്ങൾ സേവനം നടത്തുന്നതിനായി മാത്രം ഉപയോഗിക്കും.</p>
+
+    <p><b>7. പ്രൊഫൈൽ ഡിലീറ്റ്</b><br>
+    ഉപയോക്താവിന് ഏത് സമയത്തും പ്രൊഫൈൽ ഡിലീറ്റ് ചെയ്യാം.</p>
+
+    <p><b>8. നിബന്ധനകളിലെ മാറ്റം</b><br>
+    Terms & Conditions സമയാനുസൃതമായി മാറ്റാൻ
+    kmarry.in അവകാശം പുലർത്തുന്നു.</p>
+
+    <div style="text-align:center;margin-top:20px;">
+      <button onclick="closeTermsModal()"
+        style="background:#00b050;color:#fff;border:none;
+               padding:10px 20px;border-radius:8px;font-size:15px;">
+        Close
+      </button>
+    </div>
+
+  </div>
+</div>
 
 <script>
 function showLoadingPopup(message){
@@ -404,6 +471,15 @@ function showLoadingPopup(message){
   popup.style.display = 'flex';
   document.body.style.pointerEvents = 'none'; // disable all clicks
 }
+
+function openTermsModal(){
+  document.getElementById("termsModal").style.display = "flex";
+}
+
+function closeTermsModal(){
+  document.getElementById("termsModal").style.display = "none";
+}
+
 
 function hideLoadingPopup(){
   const popup = document.getElementById('loadingPopup');
@@ -703,6 +779,22 @@ function updateCasteOptions() {
 
   <label>Upload Your Photo</label>
   <input type="file" name="photoFile" accept="image/*">
+
+	  <!-- ✅ TERMS ACCEPTANCE -->
+<div style="margin:15px 0;text-align:center;font-size:14px;color:#333;">
+  <input type="checkbox"
+         id="acceptTerms"
+         required
+         style="transform:scale(1.1);margin-right:6px;">
+  <label for="acceptTerms">
+    By accepting
+    <span onclick="openTermsModal()"
+          style="color:#007bff;cursor:pointer;text-decoration:underline;">
+      Terms & Conditions
+    </span>
+  </label>
+</div>
+
 
 </form>
 <div id="status" style="text-align:center;margin-top:8px;"></div> <div class="btn-group" style="margin-top:20px">

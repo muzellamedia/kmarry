@@ -2418,6 +2418,7 @@ setTimeout(() => {
 
 // repaint profile details also
 showMyProfile(loggedProfile);
+hideLoadingPopup();
 } else {
           status.style.color = 'red';
           status.textContent = 'Failed: ' + text;
@@ -3375,7 +3376,6 @@ async function loadProfilesFully() {
   </script>
   </body>
   </html>
-
 
 
 

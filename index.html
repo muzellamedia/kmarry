@@ -2319,26 +2319,50 @@ async function updateProfile() {
 
       if (text.includes('PROFILE_UPDATED')) {
 
-          status.style.color = 'green';
-          status.textContent = 'Profile updated! Refreshing...';
+  status.style.color = 'green';
+  status.textContent = 'Profile updated! Refreshing...';
 
-          // 🔄 Refresh everything (correct & latest data)
-          await reloadAllProfiles();
-          refreshLoggedProfile();
-          localStorage.setItem("loggedProfile", JSON.stringify(loggedProfile));
-          showMyProfile(loggedProfile);
+  // ⏳ WAIT for Google Sheet → CSV sync
+  setTimeout(async () => {
 
-          showPage('pageSearch');  // back to search
+    try {
+      await reloadAllProfiles();
 
-      } 
-      else if (text.includes('PROFILE_NOT_FOUND')) {
-          status.style.color = 'red';
-          status.textContent = 'Error: Profile not found. Please re-login.';
-      } 
-      else {
-          status.style.color = 'red';
-          status.textContent = 'Error updating profile: ' + text;
+      const fresh = getFreshLoggedProfile();
+      if (fresh) {
+        loggedProfile = fresh;
+        localStorage.setItem("loggedProfile", JSON.stringify(fresh));
+        showMyProfile(fresh);
+        showPage('pageSearch');
+      } else {
+        status.style.color = 'red';
+        status.textContent = 'Profile refresh failed. Please re-login.';
+        showPage('pageLogin');
       }
+
+    } catch (e) {
+      console.error("Delayed refresh failed", e);
+      status.style.color = 'red';
+      status.textContent = 'Refresh error. Please reload page.';
+    }
+
+  }, 3000); // ✅ 3 seconds delay
+
+} 
+else if (text.includes('PROFILE_NOT_FOUND')) {
+
+  status.style.color = 'red';
+  status.textContent = 'Error: Profile not found. Please re-login.';
+  showPage('pageLogin');
+
+} 
+else {
+
+  status.style.color = 'red';
+  status.textContent = 'Error updating profile: ' + text;
+
+}
+
 
   } catch (err) {
       status.style.color = 'red';
@@ -2386,49 +2410,38 @@ function changePhoto() {
       status.textContent = 'Uploading photo... Please wait.';
 
       try {
-        const res = await fetch(SCRIPT_URL, { method: 'POST', body: formData });
+        const res = await fetch(SCRIPT_URL, { 
+          method: 'POST', 
+          body: formData 
+        });
+
         const text = await res.text();
 
         if (text.includes('PHOTO_UPDATED')) {
 
+          await reloadAllProfiles();
+
+          const fresh = getFreshLoggedProfile();
+          if (fresh) {
+            loggedProfile = fresh;
+            localStorage.setItem("loggedProfile", JSON.stringify(fresh));
+            showMyProfile(fresh);
+          }
+
           status.style.color = 'green';
-          status.textContent = 'Photo updated. Refreshing...';
+          status.textContent = 'Photo updated successfully.';
 
-         // ⭐⭐⭐ MAIN FIX — FORCE IMAGE REFRESH ⭐⭐⭐
-await reloadAllProfiles();
-refreshLoggedProfile();
-
-localStorage.setItem(
-  "loggedProfile",
-  JSON.stringify(loggedProfile)
-);
-
-// 🔥 FORCE IMAGE CACHE CLEAR
-const photoEl = document.getElementById("myProfilePhoto");
-
-const freshUrl = convertDriveLink(
-  loggedProfile["Photo Link"] || loggedProfile["Upload Your Photo"] || ""
-);
-
-// hard reset for stubborn browsers
-photoEl.src = "";
-setTimeout(() => {
-  photoEl.src = freshUrl;
-}, 50);
-
-// repaint profile details also
-showMyProfile(loggedProfile);
-hideLoadingPopup();
-} else {
+        } else {
           status.style.color = 'red';
           status.textContent = 'Failed: ' + text;
         }
 
       } catch (err) {
-        hideLoadingPopup();
         status.style.color = 'red';
         status.textContent = 'Network error';
         console.error(err);
+      } finally {
+        hideLoadingPopup();   // ✅ ALWAYS close popup
       }
     };
 
@@ -2437,7 +2450,6 @@ hideLoadingPopup();
 
   input.click();
 }
-
 
 /* Delete profile photo */
 /* 🗑️ DELETE PROFILE PHOTO — FINAL FAST VERSION */
@@ -2467,24 +2479,34 @@ async function deletePhoto() {
 
         if (text.includes('PHOTO_DELETED')) {
 
-            status.style.color = 'green';
-            status.textContent = 'Photo removed successfully.';
+  status.style.color = 'green';
+  status.textContent = 'Photo removed successfully.';
 
-            // ⭐ UI Instant Refresh
-            document.getElementById('myProfilePhoto').src =
-                "https://via.placeholder.com/150?text=No+Photo";
+  // 🔄 Reload full CSV (latest data)
+  await reloadAllProfiles();
 
-            await reloadAllProfiles();
-refreshLoggedProfile();
-localStorage.setItem("loggedProfile", JSON.stringify(loggedProfile));
-showMyProfile(loggedProfile);
+  // 🔥 Pick fresh object from latest CSV
+  const fresh = getFreshLoggedProfile();
 
+  if (fresh) {
+    loggedProfile = fresh;
+    localStorage.setItem("loggedProfile", JSON.stringify(fresh));
 
+    // 🖼️ Force UI refresh (no photo)
+    showMyProfile(fresh);
+  } else {
+    status.style.color = 'red';
+    status.textContent = 'Profile refresh failed. Please re-login.';
+    showPage('pageLogin');
+  }
 
-        } else {
-            status.style.color = 'red';
-            status.textContent = 'Failed: ' + text;
-        }
+} else {
+
+  status.style.color = 'red';
+  status.textContent = 'Failed: ' + text;
+
+}
+
 
     } catch (e) {
         hideLoadingPopup();
@@ -3349,6 +3371,16 @@ async function preloadCSV() {
     }
 }
 
+function getFreshLoggedProfile() {
+  const phone = loggedProfile?.["Your Phone Number"];
+  if (!phone) return null;
+
+  return allProfiles.find(p =>
+    String(p["Your Phone Number"] || "").trim() === String(phone).trim()
+  ) || null;
+}
+
+
 async function loadProfilesFully() {
     return new Promise(async (resolve, reject) => {
         try {
@@ -3376,7 +3408,6 @@ async function loadProfilesFully() {
   </script>
   </body>
   </html>
-
 
 
 

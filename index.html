@@ -979,9 +979,11 @@ function updateCasteOptions() {
 
   <h2 style="color:#003366;margin-bottom:15px;">My Profile Details</h2>
 
-  <img id="myProfilePhoto"
-     style="
-       width:160px;
+  <img
+    id="myProfilePhoto"
+    loading="eager"
+    style="
+      width:160px;
        height:200px;
        border-radius:12px;
        object-fit:cover;
@@ -1258,6 +1260,22 @@ function updateCasteOptions() {
       </div>
       <div class="results" id="results"></div>
       <div class="pagination" id="pagination"></div>
+      
+      <button
+  type="button"
+  onclick="backToSearch()"
+  style="
+    background:#003366;
+    color:#fff;
+    border:none;
+    padding:10px 18px;
+    border-radius:8px;
+    font-size:15px;
+    font-weight:bold;
+  ">
+  🔙 Back to Search
+</button>
+
       <div class="footer-text" style="margin-top:14px">മുന്നറിയിപ്പ് : പ്രൊഫൈലുകളുടെ സ്ക്രീന്ഷോട്ട് എടുത്ത് ഷെയർ ചെയ്യുന്നത് നിയമപ്രകാരം കുറ്റകരമാണ്</div>
     </div>
 
@@ -1529,27 +1547,19 @@ showPage('pageLogin');   // ✅ LAST: show login page
 
   function convertDriveLink(url) {
   if (!url) return "";
-  
-  let finalUrl = "";
 
-  if (url.includes("https://drive.google.com/uc?export=view&id=")) {
-    const fileId = url.split("id=")[1];
-    finalUrl = "https://lh3.googleusercontent.com/d/" + fileId;
-  } 
-  else if (url.includes("open?id=")) {
-    const fileId = url.split("open?id=")[1].split("&")[0];
-    finalUrl = "https://lh3.googleusercontent.com/d/" + fileId;
-  } 
-  else if (url.includes("/file/d/")) {
-    const fileId = url.split("/file/d/")[1].split("/")[0];
-    finalUrl = "https://lh3.googleusercontent.com/d/" + fileId;
-  }
-  else {
-    finalUrl = url;
+  let fileId = "";
+
+  if (url.includes("/d/")) {
+    fileId = url.split("/d/")[1].split("/")[0];
+  } else if (url.includes("id=")) {
+    fileId = url.split("id=")[1].split("&")[0];
   }
 
-  // ⭐ Cache Busting: Always load fresh
-  return finalUrl + "?v=" + Date.now();
+  if (!fileId) return url;
+
+  // 🔥 MOBILE SAFE — cache bust
+  return `https://lh3.googleusercontent.com/d/${fileId}?v=${Date.now()}`;
 }
 
  
@@ -2417,19 +2427,33 @@ function changePhoto() {
 
         const text = await res.text();
 
-        if (text.includes('PHOTO_UPDATED')) {
+        if (text.includes("PHOTO_UPDATED")) {
 
-          await reloadAllProfiles();
+  await reloadAllProfiles();
 
-          const fresh = getFreshLoggedProfile();
-          if (fresh) {
-            loggedProfile = fresh;
-            localStorage.setItem("loggedProfile", JSON.stringify(fresh));
-            showMyProfile(fresh);
-          }
+  const fresh = getFreshLoggedProfile();
+  if (!fresh) {
+    status.textContent = "Refresh failed. Please re-login.";
+    hideLoadingPopup();
+    return;
+  }
 
-          status.style.color = 'green';
-          status.textContent = 'Photo updated successfully.';
+  loggedProfile = fresh;
+  localStorage.setItem("loggedProfile", JSON.stringify(fresh));
+
+  // 🔥 HARD RESET IMAGE (MOBILE FIX)
+  const img = document.getElementById("myProfilePhoto");
+  img.src = "";                 // force unload
+  await new Promise(r => setTimeout(r, 80));
+  img.src = convertDriveLink(
+    fresh["Photo Link"] || fresh["Upload Your Photo"] || ""
+  );
+
+  showMyProfile(fresh);
+
+  status.style.color = "green";
+  status.textContent = "Photo updated successfully";
+
 
         } else {
           status.style.color = 'red';
@@ -3408,7 +3432,6 @@ async function loadProfilesFully() {
   </script>
   </body>
   </html>
-
 
 
 

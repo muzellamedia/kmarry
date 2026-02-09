@@ -2296,90 +2296,79 @@ function editProfile(){
 /* 💾 UPDATE PROFILE (NEW LOGIC) */
 /* 💾 UPDATE PROFILE — FINAL SUPER FAST VERSION */
 async function updateProfile() {
+
   if (!loggedProfile) { 
-      alert('Login required to update profile.');
-      showPage('pageLogin');
-      return;
+    alert('Login required to update profile.');
+    showPage('pageLogin');
+    return;
   }
 
   showLoadingPopup("Updating your profile...");
 
   const status = document.getElementById('editStatus');
-  const form = document.getElementById('editForm');
+  const form   = document.getElementById('editForm');
 
-  
-  // ⭐⭐ Correct: Use ONLY FormData (Apps Script needs this)
+  // ✅ FormData only
   const fd = new FormData(form);
   fd.append("action", "editProfile");
 
-  // add phone number for server lookup
+  // ✅ add phone identity
   appendUserIdentity(fd);
 
   try {
-      status.style.color = '#555';
-      status.textContent = 'Updating profile... Please wait...';
 
-      // ⭐⭐ Correct POST request
-      const res = await fetch(SCRIPT_URL, { 
-          method: 'POST', 
-          body: fd 
-      });
+    status.style.color = '#555';
+    status.textContent = 'Updating profile... Please wait...';
 
-      const text = await res.text();
+    // ✅ SINGLE POST REQUEST
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: fd
+    });
 
-      if (text.includes('PROFILE_UPDATED')) {
+    const text = await res.text();
 
-  status.style.color = 'green';
-  status.textContent = 'Profile updated! Refreshing...';
+    if (text.includes("PROFILE_UPDATED")) {
 
-  // ⏳ WAIT for Google Sheet → CSV sync
-  setTimeout(async () => {
+      status.style.color = "green";
+      status.textContent = "Profile updated! Refreshing...";
 
-    try {
-      await reloadAllProfiles();
+      // 🔥 ONE AND ONLY refresh
+      const ok = await forceFullProfileReload();
 
-      const fresh = getFreshLoggedProfile();
-      if (fresh) {
-        loggedProfile = fresh;
-        localStorage.setItem("loggedProfile", JSON.stringify(fresh));
-        showMyProfile(fresh);
-        showPage('pageSearch');
-      } else {
-        status.style.color = 'red';
-        status.textContent = 'Profile refresh failed. Please re-login.';
-        showPage('pageLogin');
-      }
-
-    } catch (e) {
-      console.error("Delayed refresh failed", e);
-      status.style.color = 'red';
-      status.textContent = 'Refresh error. Please reload page.';
-    }
-
-  }, 3000); // ✅ 3 seconds delay
-
-} 
-else if (text.includes('PROFILE_NOT_FOUND')) {
-
-  status.style.color = 'red';
-  status.textContent = 'Error: Profile not found. Please re-login.';
-  showPage('pageLogin');
-
-} 
-else {
-
-  status.style.color = 'red';
-  status.textContent = 'Error updating profile: ' + text;
-
+      if (ok) {
+  showPage("pageSearch");
+} else {
+  // NEVER logout on edit
+  showPage("pageSearch");
 }
 
 
+    }
+    else if (text.includes("PROFILE_NOT_FOUND")) {
+
+      status.style.color = "red";
+      status.textContent = "Profile not found. Please re-login.";
+      showPage("pageLogin");
+
+    }
+    else {
+
+      status.style.color = "red";
+      status.textContent = "Error updating profile: " + text;
+
+    }
+
   } catch (err) {
-      status.style.color = 'red';
-      status.textContent = 'Network error.';
-      console.error(err);
+
+    console.error(err);
+    status.style.color = "red";
+    status.textContent = "Network error. Please try again.";
+
   } finally {
-      hideLoadingPopup();
+
+    hideLoadingPopup();   // ✅ ALWAYS CLOSE
+
   }
 }
 
@@ -2429,30 +2418,12 @@ function changePhoto() {
 
         if (text.includes("PHOTO_UPDATED")) {
 
-  await reloadAllProfiles();
-
-  const fresh = getFreshLoggedProfile();
-  if (!fresh) {
-    status.textContent = "Refresh failed. Please re-login.";
-    hideLoadingPopup();
-    return;
-  }
-
-  loggedProfile = fresh;
-  localStorage.setItem("loggedProfile", JSON.stringify(fresh));
-
-  // 🔥 HARD RESET IMAGE (MOBILE FIX)
-  const img = document.getElementById("myProfilePhoto");
-  img.src = "";                 // force unload
-  await new Promise(r => setTimeout(r, 80));
-  img.src = convertDriveLink(
-    fresh["Photo Link"] || fresh["Upload Your Photo"] || ""
-  );
-
-  showMyProfile(fresh);
-
   status.style.color = "green";
   status.textContent = "Photo updated successfully";
+
+  await forceFullProfileReload();
+
+
 
 
         } else {
@@ -3404,6 +3375,41 @@ function getFreshLoggedProfile() {
   ) || null;
 }
 
+async function forceFullProfileReload() {
+
+  // ⏳ Short wait (mobile safe)
+  await new Promise(r => setTimeout(r, 2000));
+
+  // 🔄 Reload CSV (no cache)
+  await reloadAllProfiles();
+
+  const fresh = getFreshLoggedProfile();
+
+  // ⚠️ IMPORTANT FIX — DO NOT LOGOUT
+  if (!fresh) {
+    console.warn("⚠ CSV not updated yet. Using existing profile.");
+
+    // Just repaint UI with existing data
+    showMyProfile(loggedProfile);
+    return true;
+  }
+
+  // ✅ Update memory
+  loggedProfile = fresh;
+  localStorage.setItem("loggedProfile", JSON.stringify(fresh));
+
+  // 🖼️ Mobile image hard refresh
+  const img = document.getElementById("myProfilePhoto");
+  if (img) {
+    img.src = "";
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  showMyProfile(fresh);
+
+  console.log("✅ Profile refreshed safely");
+  return true;
+}
 
 async function loadProfilesFully() {
     return new Promise(async (resolve, reject) => {
@@ -3432,7 +3438,6 @@ async function loadProfilesFully() {
   </script>
   </body>
   </html>
-
 
 
 

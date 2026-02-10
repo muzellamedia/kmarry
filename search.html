@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kmarry – Search</title>
+
+<style>
+:root{
+  --bg:#003845;
+  --success:#00b050;
+  --danger:#dc3545;
+}
+body{
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:var(--bg);
+  color:#fff;
+}
+h2{text-align:center;margin:12px 0}
+.search-page{min-height:100vh;padding:16px}
+.search-card{
+  max-width:420px;
+  margin:auto;
+  background:#ffffff12;
+  padding:16px;
+  border-radius:14px;
+}
+label{font-size:14px;margin-top:10px;display:block}
+select{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:none;
+  margin-top:5px;
+}
+.age-row{display:flex;gap:8px}
+.btn-row{display:flex;gap:12px;margin-top:20px}
+.btn{
+  flex:1;
+  padding:14px;
+  border:none;
+  border-radius:25px;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+}
+.search-btn{background:var(--success);color:#fff}
+.logout-btn{background:var(--danger);color:#fff}
+.premium-btn{
+  width:100%;
+  margin-top:18px;
+  padding:14px;
+  border:none;
+  border-radius:30px;
+  font-size:16px;
+  font-weight:bold;
+  background:linear-gradient(135deg,#ffd700,#ffb300);
+  color:#000;
+}
+.action-grid{
+  margin-top:18px;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:12px;
+}
+.action{
+  padding:16px;
+  border:none;
+  border-radius:12px;
+  font-weight:bold;
+  color:#fff;
+  cursor:pointer;
+}
+.blue{background:#0d6efd}
+.teal{background:#00695c}
+.green{background:#25D366}
+.notice{text-align:center;font-size:13px;margin-top:15px;opacity:.9}
+</style>
+</head>
+
+<body>
+
+<div class="search-page">
+  <h2>🔍 Matrimony Search</h2>
+
+  <div class="search-card">
+
+    <label>Age</label>
+    <div class="age-row">
+      <select id="ageMin"></select>
+      <select id="ageMax"></select>
+    </div>
+
+    <label>Marital Status</label>
+    <select id="maritalStatus">
+      <option value="">All</option>
+      <option>Never Married</option>
+      <option>Divorced</option>
+      <option>Widowed</option>
+      <option>Separated</option>
+    </select>
+
+    <label>Body Type</label>
+    <select id="bodyType">
+      <option value="">All</option>
+      <option>Slim</option>
+      <option>Average</option>
+      <option>Athletic</option>
+      <option>Heavy</option>
+    </select>
+
+    <label>Caste / Sect</label>
+    <select id="searchCaste">
+      <option value="">All</option>
+    </select>
+
+    <label>District</label>
+<select id="district">
+  <option value="">All</option>
+  <option>Thiruvananthapuram</option>
+  <option>Kollam</option>
+  <option>Pathanamthitta</option>
+  <option>Alappuzha</option>
+  <option>Kottayam</option>
+  <option>Idukki</option>
+  <option>Ernakulam</option>
+  <option>Thrissur</option>
+  <option>Palakkad</option>
+  <option>Malappuram</option>
+  <option>Kozhikode</option>
+  <option>Wayanad</option>
+  <option>Kannur</option>
+  <option>Kasaragod</option>
+  <option>Outside Kerala</option>
+</select>
+
+
+    <!-- DISABILITY -->
+  <label>Disability Details</label>
+  <select name="Disability Details" id="editDisability">
+    <option>None</option>
+    <option>Deaf</option>
+    <option>Hearing Impaired</option>
+    <option>Blind</option>
+    <option>Low Vision</option>
+    <option>Physical Disabilities</option>
+    <option>Learning Disabilities</option>
+    <option>Health Issue</option>
+    <option>Other</option>
+  </select>
+
+
+
+    <div class="btn-row">
+      <button class="btn search-btn" onclick="applySearch()">Search</button>
+      <button class="btn logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <button class="premium-btn">💎 Upgrade to Premium ₹599 (6 Months)</button>
+  </div>
+
+  <div class="action-grid">
+    <button class="action blue" onclick="openMyProfile()">👤 My Profile</button>
+    <button class="action teal" onclick="openInterests('received')">📥 Received</button>
+    <button class="action blue" onclick="openInterests('accepted')">🤝 Accepted</button>
+    <button class="action green" onclick="window.open('https://wa.me/919645565177')">💬 Support</button>
+  </div>
+
+  <p class="notice">Upcoming more profiles…</p>
+</div>
+
+<!-- 🔥 ONE & ONLY SCRIPT -->
+<script type="module">
+
+/* ---------- Firebase Imports ---------- */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth,onAuthStateChanged,signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore,doc,getDoc,collection,query,where,getDocs }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+/* ---------- Firebase Config ---------- */
+const firebaseConfig = {
+  apiKey: "XXX",
+  authDomain: "XXX",
+  projectId: "XXX"
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+/* ---------- AGE DROPDOWN ---------- */
+const minSel=document.getElementById("ageMin");
+const maxSel=document.getElementById("ageMax");
+for(let i=18;i<=65;i++){
+  minSel.innerHTML+=`<option>${i}</option>`;
+  maxSel.innerHTML+=`<option>${i}</option>`;
+}
+minSel.value=18; maxSel.value=65;
+
+/* ---------- CASTE DATA ---------- */
+
+const casteData = {
+  Hindu: [
+    "Nair",
+    "Ezhava / Thiyya",
+    "Brahmin (Namboothiri, Iyer, Iyengar)",
+    "Vishwakarma",
+    "SC",
+    "ST"
+  ],
+  Muslim: [
+    "Sunni",
+    "Mujahid",
+    "Salafi",
+    "Jamath-e-Islami",
+    "Thableegh",
+    "Shafi",
+    "Hanafi"
+  ],
+  Christian: [
+    "Syrian Christian",
+    "Jacobite Syrian Christian",
+    "Orthodox Syrian Christian",
+    "Marthoma",
+    "Roman Catholic",
+    "CSI",
+    "Pentecostal",
+    "Brethren",
+    "Evangelical",
+    "Malankara Catholic"
+  ],
+  Jain: [
+    "Digambar",
+    "Shwetambar"
+  ]
+};
+
+let loggedProfile=null;
+
+/* ---------- AUTH CHECK ---------- */
+onAuthStateChanged(auth,async user=>{
+  if(!user){ location.href="index.html"; return; }
+  const snap=await getDoc(doc(db,"profiles",user.uid));
+  if(!snap.exists()) return;
+
+  loggedProfile={uid:user.uid,religion:snap.data().religion};
+  fillCaste();
+});
+
+/* ---------- CASTE FILL ---------- */
+function fillCaste(){
+  const sel=document.getElementById("searchCaste");
+  sel.innerHTML='<option value="">All</option>';
+  (casteData[loggedProfile.religion]||[])
+    .forEach(c=>sel.innerHTML+=`<option>${c}</option>`);
+}
+
+/* ---------- SEARCH ---------- */
+window.applySearch=async()=>{
+  const minAge=+ageMin.value;
+  const maxAge=+ageMax.value;
+  const caste=searchCaste.value;
+
+  let q=query(collection(db,"profiles"),
+    where("age",">=",minAge),
+    where("age","<=",maxAge)
+  );
+  if(caste) q=query(q,where("caste","==",caste));
+
+  const snap=await getDocs(q);
+  console.log("Results:",snap.size);
+};
+
+/* ---------- NAV ---------- */
+window.logout=async()=>{ await signOut(auth); location.href="index.html"; }
+window.openMyProfile=()=>location.href="profile.html";
+window.openInterests=t=>location.href=`interests.html?type=${t}`;
+
+</script>
+
+</body>
+</html>

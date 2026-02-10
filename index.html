@@ -3,179 +3,164 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kmarry Login</title>
+<title>Kmarry – OTP Login</title>
 
 <style>
 body{
   margin:0;
   height:100vh;
   font-family:Arial,Helvetica,sans-serif;
-  background:url('https://lh3.googleusercontent.com/d/1y32Yv9BtQsuP8D2MCK8FFR780e3bugtg')
-             no-repeat center center / cover;
+  background:#003845;
   display:flex;
   align-items:center;
   justify-content:center;
 }
-
-#loginBox{
+.box{
+  background:#ffffff;
   width:100%;
-  max-width:420px;
-  padding:36px 28px;
-  box-sizing:border-box;
-  text-align:center;
+  max-width:360px;
+  padding:28px;
+  border-radius:14px;
+  box-shadow:0 10px 25px rgba(0,0,0,.25);
 }
-
-label{
-  display:block;
-  text-align:left;
-  margin:6px 0 4px;
-  font-size:14px;
-  color:#000;
-  font-weight:500;
-}
-
-input, select{
+h3{text-align:center;margin-bottom:18px}
+input{
   width:100%;
   padding:12px;
-  border:none;
-  border-radius:6px;
   margin-bottom:12px;
   font-size:15px;
-  background:rgba(255,255,255,0.9);
 }
-
 button{
   width:100%;
-  padding:13px;
-  border:none;
-  border-radius:25px;
+  padding:12px;
   font-size:16px;
   font-weight:bold;
+  border:none;
+  border-radius:25px;
   cursor:pointer;
 }
-
-#loginBtn{
-  background:#00b050;
-  color:#fff;
-}
-
-#registerBtn{
-  background:#001a66;
-  color:#fff;
-  margin-top:10px;
-}
-
-#error{
-  color:#ff4d4d;
-  margin-top:10px;
-  font-size:14px;
-}
+#sendBtn{background:#00b050;color:#fff}
+#verifyBtn{background:#0d6efd;color:#fff;display:none}
+#otp{display:none}
+#msg{margin-top:10px;font-size:14px;text-align:center}
 </style>
 </head>
 
 <body>
 
-<div id="loginBox">
+<div class="box">
+  <h3>📱 OTP Login</h3>
 
-  <!-- LOGO -->
-  <img src="https://lh3.googleusercontent.com/d/1pW_lK0eIhREggZuuR8SX89Ye3xQbptG7"
-       style="width:180px;margin-bottom:18px">
-
-  <p style="color:#008000;font-size:13px;margin-bottom:18px;">
-    വിവാഹം വിരൽത്തുമ്പിൽ
-  </p>
-
-  <!-- PHONE -->
-  <label>Your Phone Number</label>
-  <input type="tel" id="phone" placeholder="Enter phone number"
+  <input id="phone" placeholder="Enter phone number"
          maxlength="10" inputmode="numeric">
 
-  <!-- DOB -->
-  <label>Date of Birth</label>
-  <div style="display:flex;gap:6px;">
-    <select id="day"><option value="">Day</option></select>
-    <select id="month"><option value="">Month</option></select>
-    <select id="year"><option value="">Year</option></select>
-  </div>
+  <div id="recaptcha-container"></div>
 
-  <!-- LOGIN -->
-  <button id="loginBtn" onclick="login()">Login</button>
+  <button id="sendBtn">Send OTP</button>
 
-  <!-- REGISTER -->
-  <button id="registerBtn" onclick="goRegister()">Register Now</button>
+  <input id="otp" placeholder="Enter OTP">
 
-  <div id="error"></div>
+  <button id="verifyBtn">Verify OTP</button>
 
+  <div id="msg"></div>
 </div>
 
-<script>
-/* DOB dropdown fill */
-(function fillDOB(){
-  const d=document.getElementById('day');
-  const m=document.getElementById('month');
-  const y=document.getElementById('year');
-  for(let i=1;i<=31;i++) d.innerHTML+=`<option>${i}</option>`;
-  for(let i=1;i<=12;i++) m.innerHTML+=`<option>${i}</option>`;
-  for(let i=new Date().getFullYear();i>=1960;i--) y.innerHTML+=`<option>${i}</option>`;
-})();
-
-/* LOGIN (placeholder – Firebase later) */
-function login(){
-  const phone=document.getElementById('phone').value.trim();
-  const day=day.value, month=month.value, year=year.value;
-  const err=document.getElementById('error');
-  err.textContent="";
-
-  if(!phone || !day || !month || !year){
-    err.textContent="Please enter phone number and DOB";
-    return;
-  }
-
-  // 🔥 Firebase login logic will come here
-  console.log("LOGIN DATA:", phone, `${day}/${month}/${year}`);
-}
-
-/* Go to register page */
-function goRegister(){
-  window.location.href="register.html";
-}
-</script>
 <script type="module">
+
 /* 🔥 Firebase imports */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { 
+  getAuth, 
+  RecaptchaVerifier, 
+  signInWithPhoneNumber 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { 
+  getFirestore, 
+  doc, 
+  getDoc 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-/* 🔑 YOUR firebaseConfig (ഇവിടെ നിങ്ങൾക്ക് കിട്ടിയത് paste ചെയ്യുക) */
+/* 🔑 YOUR firebaseConfig */
 const firebaseConfig = {
-  apiKey: "AIzaSyDEV5QfsK3tTWxpOh45678pBZwtoZ0wzMU",
-  authDomain: "kmarry-5ce8a.firebaseapp.com",
-  projectId: "kmarry-5ce8a",
-  storageBucket: "kmarry-5ce8a.firebasestorage.app",
-  messagingSenderId: "577718422582",
-  appId: "1:577718422582:web:f043d44aa6616a5af25c97"
+  apiKey: "PASTE_HERE",
+  authDomain: "PASTE_HERE",
+  projectId: "PASTE_HERE",
+  appId: "PASTE_HERE"
 };
 
-/* 🚀 Initialize Firebase */
+/* 🚀 Init */
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
 
-/* 🔐 TEMP TEST LOGIN (just to verify Firebase connected) */
-signInAnonymously(auth)
-  .then(() => {
-    console.log("✅ Firebase connected successfully");
-  })
-  .catch(err => {
-    console.error("❌ Firebase error", err);
-  });
+/* 🌍 GLOBAL */
+let confirmationResult;
 
-/* 🌍 Make available globally (later pages use this) */
-window.auth = auth;
-window.db   = db;
+/* 🔐 reCAPTCHA (invisible) */
+window.recaptchaVerifier = new RecaptchaVerifier(
+  auth,
+  "recaptcha-container",
+  { size: "invisible" }
+);
+
+/* 📤 SEND OTP */
+document.getElementById("sendBtn").onclick = async () => {
+
+  const phone = document.getElementById("phone").value.trim();
+  const msg   = document.getElementById("msg");
+
+  if(phone.length !== 10){
+    msg.textContent="❌ Enter valid phone number";
+    return;
+  }
+
+  msg.textContent="Sending OTP...";
+  const fullPhone = "+91" + phone;
+
+  try{
+    confirmationResult =
+      await signInWithPhoneNumber(auth, fullPhone, window.recaptchaVerifier);
+
+    document.getElementById("otp").style.display="block";
+    document.getElementById("verifyBtn").style.display="block";
+    msg.textContent="✅ OTP sent";
+  }catch(e){
+    console.error(e);
+    msg.textContent="❌ OTP failed";
+  }
+};
+
+/* ✅ VERIFY OTP */
+document.getElementById("verifyBtn").onclick = async () => {
+
+  const code = document.getElementById("otp").value.trim();
+  const msg  = document.getElementById("msg");
+
+  if(code.length !== 6){
+    msg.textContent="❌ Enter valid OTP";
+    return;
+  }
+
+  try{
+    const res = await confirmationResult.confirm(code);
+    const uid = res.user.uid;
+
+    /* 🔎 CHECK PROFILE */
+    const snap = await getDoc(doc(db,"profiles",uid));
+
+    if(snap.exists()){
+      location.href="search.html";
+    }else{
+      location.href="register.html";
+    }
+
+  }catch(e){
+    console.error(e);
+    msg.textContent="❌ Wrong OTP";
+  }
+};
+
 </script>
 
-	
 </body>
 </html>
-

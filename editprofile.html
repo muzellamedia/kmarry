@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edit Profile – Kmarry</title>
+
+<style>
+/* 🌐 BASE */
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:Arial,Helvetica,sans-serif;
+  background:#003845;
+  display:flex;
+  justify-content:center;
+}
+
+.container{
+  width:100%;
+  max-width:520px;
+  padding:18px;
+}
+
+/* 🔹 FORM GRID */
+.form-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:12px;
+}
+
+@media(min-width:600px){
+  .form-grid{
+    grid-template-columns:1fr 1fr;
+  }
+}
+
+.full{
+  grid-column:1 / -1;
+}
+
+/* 🔤 LABEL & INPUT */
+label{
+  display:block;
+  color:#fff;
+  font-size:13px;
+  margin-bottom:4px;
+}
+
+input,select,textarea{
+  width:100%;
+  padding:9px;
+  font-size:14px;
+  border-radius:6px;
+  border:1px solid #ccc;
+}
+
+textarea{
+  min-height:80px;
+}
+
+/* 💾 BUTTON */
+button{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:25px;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+#saveBtn{
+  background:#00b050;
+  color:#fff;
+}
+
+/* 📌 STICKY SAVE (MOBILE) */
+.sticky-save{
+  position:sticky;
+  bottom:10px;
+  margin-top:20px;
+  z-index:5;
+}
+
+/* STATUS */
+#status{
+  text-align:center;
+  margin-top:10px;
+  font-size:14px;
+  color:#fff;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h2>✏️ Edit Profile</h2>
+
+<form id="editForm">
+
+<label>Name</label>
+<input name="name" required>
+
+<label>Gender</label>
+<select name="gender" required>
+  <option value="">Select</option>
+  <option>Male</option>
+  <option>Female</option>
+</select>
+
+<label>Height</label>
+<input name="height">
+
+<label>Religion</label>
+<select name="religion" id="religion" required onchange="updateCasteOptions()">
+  <option value="">Select</option>
+  <option>Hindu</option>
+  <option>Muslim</option>
+  <option>Christian</option>
+  <option>Jain</option>
+</select>
+
+<label>Caste / Sect</label>
+<select name="caste" id="caste" required></select>
+
+<label>Marital Status</label>
+<select name="maritalStatus" required>
+  <option>Never Married</option>
+  <option>Divorced</option>
+  <option>Widowed</option>
+  <option>Separated</option>
+</select>
+
+<label>Body Type</label>
+<select name="bodyType">
+  <option>Slim</option>
+  <option>Average</option>
+  <option>Athletic</option>
+  <option>Heavy</option>
+</select>
+
+<label>Complexion</label>
+<select name="complexion">
+  <option>Very Fair</option>
+  <option>Fair</option>
+  <option>Wheatish</option>
+  <option>Dark</option>
+</select>
+
+<label>Education</label>
+<input name="education">
+
+<label>Job</label>
+<input name="job">
+
+<label>District</label>
+<input name="district">
+
+<label>Native Place</label>
+<input name="nativePlace">
+
+<label>Full Address</label>
+<textarea name="address"></textarea>
+
+<label>About Me</label>
+<textarea name="about"></textarea>
+
+<button id="saveBtn" type="submit">💾 Save Changes</button>
+<div id="status"></div>
+
+</form>
+</div>
+
+<script>
+const casteData={
+  Hindu:["Nair","Ezhava / Thiyya","Brahmin","Vishwakarma","SC","ST"],
+  Muslim:["Sunni","Mujahid","Salafi","Jamath-e-Islami","Shafi","Hanafi"],
+  Christian:["Syrian Christian","Jacobite","Orthodox","Marthoma","Roman Catholic","CSI","Pentecostal"]
+};
+
+function updateCasteOptions(){
+  const r=document.getElementById("religion").value;
+  const c=document.getElementById("caste");
+  c.innerHTML="";
+  (casteData[r]||[]).forEach(x=>{
+    c.innerHTML+=`<option>${x}</option>`;
+  });
+}
+</script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth,onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore,doc,getDoc,updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig={apiKey:"XXX",authDomain:"XXX",projectId:"XXX"};
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getFirestore(app);
+
+const form=document.getElementById("editForm");
+const status=document.getElementById("status");
+
+let uid=null;
+
+onAuthStateChanged(auth,async user=>{
+  if(!user){location.href="index.html";return;}
+  uid=user.uid;
+  const snap=await getDoc(doc(db,"profiles",uid));
+  if(!snap.exists())return;
+
+  const p=snap.data();
+  Object.keys(p).forEach(k=>{
+    if(form[k]) form[k].value=p[k];
+  });
+  updateCasteOptions();
+});
+
+form.addEventListener("submit",async e=>{
+  e.preventDefault();
+
+  const data=Object.fromEntries(new FormData(form));
+  await updateDoc(doc(db,"profiles",uid),data);
+
+  status.textContent="✅ Profile updated successfully";
+  status.style.color="#0f0";
+});
+</script>
+
+</body>
+</html>

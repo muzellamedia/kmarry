@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kmarry Registration</title>
+
+
+<style>
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:Arial,Helvetica,sans-serif;
+  background:#003845;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.container{
+  width:100%;
+  max-width:520px;
+  background:transparent;
+  padding:20px;
+  box-sizing:border-box;
+}
+
+h2{
+  text-align:center;
+  color:#fff;
+  margin-bottom:18px;
+}
+
+label{
+  display:block;
+  margin:8px 0 4px;
+  font-size:14px;
+  color:#fff;
+  font-weight:500;
+}
+
+input, select, textarea{
+  width:100%;
+  padding:10px;
+  border-radius:6px;
+  border:1px solid #ccc;
+  font-size:15px;
+  box-sizing:border-box;
+}
+
+textarea{ min-height:80px }
+
+.dob{
+  display:flex;
+  gap:6px;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:25px;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+#submitBtn{ background:#00b050; color:#fff; }
+#backBtn{ background:#ccc; color:#000; margin-top:10px }
+
+#status{
+  margin-top:10px;
+  text-align:center;
+  font-size:14px;
+}
+/* 🔴 REQUIRED FIELD ERROR BORDER */
+#regForm input:required:invalid:not(:focus),
+#regForm select:required:invalid:not(:focus),
+#regForm textarea:required:invalid:not(:focus) {
+  border: 2px solid #dc3545 !important;   /* RED */
+  background: #fff0f0;
+}
+
+/* ✅ FOCUS → NORMAL BORDER */
+#regForm input:focus,
+#regForm select:focus,
+#regForm textarea:focus {
+  border: 2px solid #0d6efd;   /* BLUE */
+  outline: none;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>📝 Matrimony Registration</h2>
+
+<form id="regForm">
+
+  <!-- BASIC DETAILS -->
+<label>Name</label>
+<input name="name" required>
+
+<label>Your Phone Number</label>
+<input
+  name="phone"
+  id="regPhone"
+  type="tel"
+  required
+  minlength="10"
+  maxlength="10"
+  pattern="[0-9]{10}"
+  inputmode="numeric"
+  autocomplete="tel"
+>
+
+<label>Date of Birth</label>
+<div class="dob">
+  <select name="dob_day" required><option value="">Day</option></select>
+  <select name="dob_month" required><option value="">Month</option></select>
+  <select name="dob_year" required><option value="">Year</option></select>
+</div>
+
+<label>Gender</label>
+<select name="gender" required>
+  <option value="">Select</option>
+  <option value="Male">Male</option>
+  <option value="Female">Female</option>
+</select>
+
+<label>Height</label>
+<input name="height" placeholder="eg: 165 cm">
+
+<label>Religion</label>
+<select id="religion" name="religion" required onchange="updateCasteOptions()">
+  <option value="">Select</option>
+  <option value="Hindu">Hindu</option>
+  <option value="Muslim">Muslim</option>
+  <option value="Christian">Christian</option>
+  <option value="Jain">Jain</option>
+</select>
+
+<label>Caste / Sect</label>
+<select id="caste" name="caste" required>
+  <option value="">Select Religion First</option>
+</select>
+
+<!-- MARITAL -->
+<label>Marital Status</label>
+<select name="marital_status" required>
+  <option value="">Select</option>
+  <option value="Never Married">Never Married</option>
+  <option value="Divorced">Divorced</option>
+  <option value="Widowed">Widowed</option>
+  <option value="Separated">Separated</option>
+</select>
+
+<label>Number of Children</label>
+<input type="number" name="children_count" min="0">
+
+<label>Children Living With</label>
+<select name="children_with">
+  <option value="">Select</option>
+  <option value="Self">Self</option>
+  <option value="Ex Partner">Ex Partner</option>
+  <option value="Relatives">Relatives</option>
+</select>
+
+<!-- PHYSICAL DETAILS -->
+<label>Body Type</label>
+<select name="body_type" required>
+  <option value="">Select</option>
+  <option value="Slim">Slim</option>
+  <option value="Average">Average</option>
+  <option value="Athletic">Athletic</option>
+  <option value="Heavy">Heavy</option>
+</select>
+
+<label>Complexion</label>
+<select name="complexion" required>
+  <option value="">Select</option>
+  <option value="Very Fair">Very Fair</option>
+  <option value="Fair">Fair</option>
+  <option value="Wheatish">Wheatish</option>
+  <option value="Wheatish Medium">Wheatish Medium</option>
+  <option value="Dark">Dark</option>
+</select>
+
+<!-- EDUCATION & JOB -->
+<label>Education</label>
+<input name="education" required>
+
+<label>Job</label>
+<input name="job" required>
+
+<!-- DISABILITY -->
+<label>Disability Details</label>
+<select name="disability">
+  <option value="None">None</option>
+  <option value="Deaf">Deaf</option>
+  <option value="Blind">Blind</option>
+  <option value="Low Vision">Low Vision</option>
+  <option value="Physical Disabilities">Physical Disabilities</option>
+  <option value="Learning Disabilities">Learning Disabilities</option>
+  <option value="Health Issue">Health Issue</option>
+  <option value="Other">Other</option>
+</select>
+
+<!-- FAMILY -->
+<label>Family Type</label>
+<select name="family_type">
+  <option value="Nuclear">Nuclear</option>
+  <option value="Joint">Joint</option>
+</select>
+
+<label>Number of Brothers</label>
+<input type="number" name="brothers" min="0">
+
+<label>Number of Sisters</label>
+<input type="number" name="sisters" min="0">
+
+<label>Family Status</label>
+<select name="family_status">
+  <option value="Poor">Poor</option>
+  <option value="Middle Class">Middle Class</option>
+  <option value="Upper Middle">Upper Middle</option>
+  <option value="Rich">Rich</option>
+</select>
+
+<!-- ADDRESS -->
+<label>Native Place</label>
+<input name="native_place" required>
+
+<label>Full Address</label>
+<textarea name="address" required></textarea>
+
+<label>District</label>
+<select name="district" required>
+  <option value="">Select</option>
+  <option value="Thiruvananthapuram">Thiruvananthapuram</option>
+  <option value="Kollam">Kollam</option>
+  <option value="Pathanamthitta">Pathanamthitta</option>
+  <option value="Alappuzha">Alappuzha</option>
+  <option value="Kottayam">Kottayam</option>
+  <option value="Idukki">Idukki</option>
+  <option value="Ernakulam">Ernakulam</option>
+  <option value="Thrissur">Thrissur</option>
+  <option value="Palakkad">Palakkad</option>
+  <option value="Malappuram">Malappuram</option>
+  <option value="Kozhikode">Kozhikode</option>
+  <option value="Wayanad">Wayanad</option>
+  <option value="Kannur">Kannur</option>
+  <option value="Kasaragod">Kasaragod</option>
+  <option value="Outside Kerala">Outside Kerala</option>
+</select>
+
+<!-- CONTACT -->
+<label>Contact Number 1</label>
+<input name="contact1" required>
+
+<label>Contact Number 2</label>
+<input name="contact2">
+
+<label>About Me</label>
+<textarea name="about"></textarea>
+
+<label>Upload Profile Photo</label>
+<input
+  type="file"
+  id="photo"
+  name="photo"
+  accept="image/*"
+  required
+>
+
+       
+<img id="photoPreview"
+     style="display:none;width:120px;height:150px;
+            object-fit:cover;border-radius:10px;
+            margin-top:10px;border:2px solid #ddd;">
+
+
+
+  <button id="submitBtn" type="submit">Submit</button>
+  <button id="backBtn" type="button" onclick="goLogin()">Back to Login</button>
+
+  <div id="status"></div>
+</form>
+
+</div>
+
+<script>
+/* DOB fill */
+(function(){
+  const d=document.querySelector("select[name=day]");
+  const m=document.querySelector("select[name=month]");
+  const y=document.querySelector("select[name=year]");
+  for(let i=1;i<=31;i++) d.innerHTML+=`<option>${i}</option>`;
+  for(let i=1;i<=12;i++) m.innerHTML+=`<option>${i}</option>`;
+  for(let i=new Date().getFullYear();i>=1960;i--) y.innerHTML+=`<option>${i}</option>`;
+})();
+
+
+
+
+function goLogin(){
+  window.location.href="index.html";
+}
+
+
+</script>
+<script>
+document.getElementById("photo").addEventListener("change", function () {
+  const file = this.files[0];
+  if (!file) return;
+
+  const img = document.getElementById("photoPreview");
+  img.src = URL.createObjectURL(file);
+  img.style.display = "block";
+});
+</script>
+
+<script>
+document.getElementById("regForm").addEventListener("submit", function(e){
+  e.preventDefault();
+
+  const form = this;
+  const status = document.getElementById("status");
+
+  // 🔥 REQUIRED FIELD CHECK
+  if (!form.checkValidity()) {
+    status.textContent = "❌ Please fill required fields";
+    status.style.color = "red";
+    return;
+  }
+
+  status.textContent = "✅ All required fields filled";
+  status.style.color = "green";
+
+  // 🔥 Firebase submit logic later
+});
+</script>
+
+<script>
+const casteData = {
+  Hindu: [
+    "Nair",
+    "Ezhava / Thiyya",
+    "Brahmin (Namboothiri, Iyer, Iyengar)",
+    "Vishwakarma",
+    "SC",
+    "ST"
+  ],
+  Muslim: [
+    "Sunni",
+    "Mujahid",
+    "Salafi",
+    "Jamath-e-Islami",
+    "Thableegh",
+    "Shafi",
+    "Hanafi"
+  ],
+  Christian: [
+    "Syrian Christian",
+    "Jacobite Syrian Christian",
+    "Orthodox Syrian Christian",
+    "Marthoma",
+    "Roman Catholic",
+    "CSI",
+    "Pentecostal",
+    "Brethren",
+    "Evangelical",
+    "Malankara Catholic"
+  ],
+  Jain: [
+    "Digambar",
+    "Shwetambar"
+  ]
+};
+
+function updateCasteOptions() {
+  const religionSelect = document.getElementById("religion");
+  const casteSelect = document.getElementById("caste");
+
+  // reset caste
+  casteSelect.innerHTML = `<option value="">Select</option>`;
+
+  const religion = religionSelect.value;
+
+  if (!religion || !casteData[religion]) {
+    casteSelect.innerHTML = `<option value="">Select Religion First</option>`;
+    return;
+  }
+
+  casteData[religion].forEach(caste => {
+    const opt = document.createElement("option");
+    opt.value = caste;
+    opt.textContent = caste;
+    casteSelect.appendChild(opt);
+  });
+}
+</script>
+
+</body>
+</html>

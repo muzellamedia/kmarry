@@ -140,6 +140,42 @@ function goRegister(){
   window.location.href="register.html";
 }
 </script>
+<script type="module">
+/* 🔥 Firebase imports */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+/* 🔑 YOUR firebaseConfig (ഇവിടെ നിങ്ങൾക്ക് കിട്ടിയത് paste ചെയ്യുക) */
+const firebaseConfig = {
+  apiKey: "AIzaSyDEV5QfsK3tTWxpOh45678pBZwtoZ0wzMU",
+  authDomain: "kmarry-5ce8a.firebaseapp.com",
+  projectId: "kmarry-5ce8a",
+  storageBucket: "kmarry-5ce8a.firebasestorage.app",
+  messagingSenderId: "577718422582",
+  appId: "1:577718422582:web:f043d44aa6616a5af25c97"
+};
+
+/* 🚀 Initialize Firebase */
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+/* 🔐 TEMP TEST LOGIN (just to verify Firebase connected) */
+signInAnonymously(auth)
+  .then(() => {
+    console.log("✅ Firebase connected successfully");
+  })
+  .catch(err => {
+    console.error("❌ Firebase error", err);
+  });
+
+/* 🌍 Make available globally (later pages use this) */
+window.auth = auth;
+window.db   = db;
+</script>
+
+	
 </body>
 </html>
+

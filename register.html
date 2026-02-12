@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kmarry Registration</title>
 
-
 <style>
 body{
   margin:0;
@@ -16,332 +15,542 @@ body{
   align-items:center;
   justify-content:center;
 }
-
 .container{
   width:100%;
-  max-width:520px;
-  background:transparent;
+  max-width:500px;
+  background:#ffffff;
   padding:20px;
-  box-sizing:border-box;
+  border-radius:10px;
 }
-
-h2{
-  text-align:center;
-  color:#fff;
-  margin-bottom:18px;
-}
-
-label{
-  display:block;
-  margin:8px 0 4px;
-  font-size:14px;
-  color:#fff;
-  font-weight:500;
-}
-
-input, select, textarea{
+h2{text-align:center;margin-bottom:15px;}
+input,select,textarea{
   width:100%;
   padding:10px;
+  margin:6px 0;
   border-radius:6px;
   border:1px solid #ccc;
-  font-size:15px;
-  box-sizing:border-box;
 }
-
-textarea{ min-height:80px }
-
-.dob{
-  display:flex;
-  gap:6px;
-}
-
 button{
   width:100%;
   padding:12px;
+  margin-top:10px;
   border:none;
   border-radius:25px;
-  font-size:16px;
   font-weight:bold;
   cursor:pointer;
 }
-
-#submitBtn{ background:#00b050; color:#fff; }
-#backBtn{ background:#ccc; color:#000; margin-top:10px }
-
-#status{
+.nextBtn{background:#007bff;color:#fff;}
+.submitBtn{background:#00b050;color:#fff;}
+.hidden{display:none;}
+#photoPreview{
+  width:120px;
+  height:150px;
+  object-fit:cover;
+  border-radius:10px;
+  display:none;
   margin-top:10px;
-  text-align:center;
-  font-size:14px;
 }
-/* 🔴 REQUIRED FIELD ERROR BORDER */
-#regForm input:required:invalid:not(:focus),
-#regForm select:required:invalid:not(:focus),
-#regForm textarea:required:invalid:not(:focus) {
-  border: 2px solid #dc3545 !important;   /* RED */
-  background: #fff0f0;
-}
-
-/* ✅ FOCUS → NORMAL BORDER */
-#regForm input:focus,
-#regForm select:focus,
-#regForm textarea:focus {
-  border: 2px solid #0d6efd;   /* BLUE */
-  outline: none;
-}
-
 </style>
 </head>
-
 <body>
 
 <div class="container">
 
-<h2>📝 Matrimony Registration</h2>
+<h2>Kmarry Registration</h2>
 
-<form id="regForm">
+<!-- STEP 1 -->
+<div id="step1">
+  <h3>Phone Verification</h3>
 
-  <!-- BASIC DETAILS -->
-<label>Name</label>
-<input name="name" required>
+  <select id="countryCode">
+    <option value="+91">🇮🇳 +91</option>
+    <option value="+971">🇦🇪 +971</option>
+    <option value="+966">🇸🇦 +966</option>
+    <option value="+965">🇰🇼 +965</option>
+    <option value="+974">🇶🇦 +974</option>
+    <option value="+968">🇴🇲 +968</option>
+  </select>
 
-<label>Your Phone Number</label>
-<input
-  name="phone"
-  id="regPhone"
-  type="tel"
-  required
-  minlength="10"
-  maxlength="10"
-  pattern="[0-9]{10}"
-  inputmode="numeric"
-  autocomplete="tel"
->
+  <input type="tel" id="phoneInput" placeholder="Enter phone number" maxlength="12">
 
-<label>Date of Birth</label>
-<div class="dob">
-  <select name="dob_day" required><option value="">Day</option></select>
-  <select name="dob_month" required><option value="">Month</option></select>
-  <select name="dob_year" required><option value="">Year</option></select>
+  <div id="recaptcha-container"></div>
+
+  <button class="nextBtn" onclick="sendOTP()">Send OTP</button>
+
+  <input type="text" id="otpInput" placeholder="Enter OTP">
+
+<button class="nextBtn" onclick="verifyOTP()">Verify & Next</button>
+
+<button type="button" id="resendBtn" onclick="resendOTP()" disabled>
+  Resend OTP (30s)
+</button>
 </div>
 
-<label>Gender</label>
-<select name="gender" required>
-  <option value="">Select</option>
-  <option value="Male">Male</option>
-  <option value="Female">Female</option>
-</select>
 
-<label>Height</label>
-<input name="height" placeholder="eg: 165 cm">
+<!-- STEP 2 -->
+<div id="step2" class="hidden">
+  <h3>Fill Details</h3>
 
-<label>Religion</label>
-<select id="religion" name="religion" required onchange="updateCasteOptions()">
-  <option value="">Select</option>
-  <option value="Hindu">Hindu</option>
-  <option value="Muslim">Muslim</option>
-  <option value="Christian">Christian</option>
-  <option value="Jain">Jain</option>
-</select>
+  <label>Name</label>
+  <input id="name" name="name" required>
 
-<label>Caste / Sect</label>
-<select id="caste" name="caste" required>
-  <option value="">Select Religion First</option>
-</select>
+  <!-- DOB -->
+  <div class="dob">
+    <select id="dob_day" name="dob_day" required>
+      <option value="">Day</option>
+    </select>
 
-<!-- MARITAL -->
-<label>Marital Status</label>
-<select name="marital_status" required>
-  <option value="">Select</option>
-  <option value="Never Married">Never Married</option>
-  <option value="Divorced">Divorced</option>
-  <option value="Widowed">Widowed</option>
-  <option value="Separated">Separated</option>
-</select>
+    <select id="dob_month" name="dob_month" required>
+      <option value="">Month</option>
+    </select>
 
-<label>Number of Children</label>
-<input type="number" name="children_count" min="0">
+    <select id="dob_year" name="dob_year" required>
+      <option value="">Year</option>
+    </select>
+  </div>
 
-<label>Children Living With</label>
-<select name="children_with">
-  <option value="">Select</option>
-  <option value="Self">Self</option>
-  <option value="Ex Partner">Ex Partner</option>
-  <option value="Relatives">Relatives</option>
-</select>
+  <label>Gender</label>
+  <select id="gender" name="gender" required>
+    <option value="">Select</option>
+    <option value="Male">Male</option>
+    <option value="Female">Female</option>
+  </select>
 
-<!-- PHYSICAL DETAILS -->
-<label>Body Type</label>
-<select name="body_type" required>
-  <option value="">Select</option>
-  <option value="Slim">Slim</option>
-  <option value="Average">Average</option>
-  <option value="Athletic">Athletic</option>
-  <option value="Heavy">Heavy</option>
-</select>
+  <label>Height</label>
+  <input id="height" name="height" placeholder="eg: 165 cm">
 
-<label>Complexion</label>
-<select name="complexion" required>
-  <option value="">Select</option>
-  <option value="Very Fair">Very Fair</option>
-  <option value="Fair">Fair</option>
-  <option value="Wheatish">Wheatish</option>
-  <option value="Wheatish Medium">Wheatish Medium</option>
-  <option value="Dark">Dark</option>
-</select>
+  <label>Religion</label>
+  <select id="religion" name="religion" required onchange="updateCasteOptions()">
+    <option value="">Select</option>
+    <option value="Hindu">Hindu</option>
+    <option value="Muslim">Muslim</option>
+    <option value="Christian">Christian</option>
+    <option value="Jain">Jain</option>
+  </select>
 
-<!-- EDUCATION & JOB -->
-<label>Education</label>
-<input name="education" required>
+  <label>Caste / Sect</label>
+  <select id="caste" name="caste" required>
+    <option value="">Select Religion First</option>
+  </select>
 
-<label>Job</label>
-<input name="job" required>
+  <label>Marital Status</label>
+  <select id="marital_status" name="marital_status" required onchange="toggleChildrenFields()">
+    <option value="">Select</option>
+    <option value="Never Married">Never Married</option>
+    <option value="Divorced">Divorced</option>
+    <option value="Widowed">Widowed</option>
+    <option value="Separated">Separated</option>
+  </select>
+	
+  <!-- CHILDREN SECTION -->
+<div id="childrenSection" class="hidden">
 
-<!-- DISABILITY -->
-<label>Disability Details</label>
-<select name="disability">
-  <option value="None">None</option>
-  <option value="Deaf">Deaf</option>
-  <option value="Blind">Blind</option>
-  <option value="Low Vision">Low Vision</option>
-  <option value="Physical Disabilities">Physical Disabilities</option>
-  <option value="Learning Disabilities">Learning Disabilities</option>
-  <option value="Health Issue">Health Issue</option>
-  <option value="Other">Other</option>
-</select>
+  <label>Number of Children</label>
+  <input type="number" id="children_count" name="children_count" min="0">
 
-<!-- FAMILY -->
-<label>Family Type</label>
-<select name="family_type">
-  <option value="Nuclear">Nuclear</option>
-  <option value="Joint">Joint</option>
-</select>
+  <label>Children Living With</label>
+  <select id="children_with" name="children_with">
+    <option value="">Select</option>
+    <option value="Self">Self</option>
+    <option value="Ex Partner">Ex Partner</option>
+    <option value="Relatives">Relatives</option>
+  </select>
 
-<label>Number of Brothers</label>
-<input type="number" name="brothers" min="0">
-
-<label>Number of Sisters</label>
-<input type="number" name="sisters" min="0">
-
-<label>Family Status</label>
-<select name="family_status">
-  <option value="Poor">Poor</option>
-  <option value="Middle Class">Middle Class</option>
-  <option value="Upper Middle">Upper Middle</option>
-  <option value="Rich">Rich</option>
-</select>
-
-<!-- ADDRESS -->
-<label>Native Place</label>
-<input name="native_place" required>
-
-<label>Full Address</label>
-<textarea name="address" required></textarea>
-
-<label>District</label>
-<select name="district" required>
-  <option value="">Select</option>
-  <option value="Thiruvananthapuram">Thiruvananthapuram</option>
-  <option value="Kollam">Kollam</option>
-  <option value="Pathanamthitta">Pathanamthitta</option>
-  <option value="Alappuzha">Alappuzha</option>
-  <option value="Kottayam">Kottayam</option>
-  <option value="Idukki">Idukki</option>
-  <option value="Ernakulam">Ernakulam</option>
-  <option value="Thrissur">Thrissur</option>
-  <option value="Palakkad">Palakkad</option>
-  <option value="Malappuram">Malappuram</option>
-  <option value="Kozhikode">Kozhikode</option>
-  <option value="Wayanad">Wayanad</option>
-  <option value="Kannur">Kannur</option>
-  <option value="Kasaragod">Kasaragod</option>
-  <option value="Outside Kerala">Outside Kerala</option>
-</select>
-
-<!-- CONTACT -->
-<label>Contact Number 1</label>
-<input name="contact1" required>
-
-<label>Contact Number 2</label>
-<input name="contact2">
-
-<label>About Me</label>
-<textarea name="about"></textarea>
-
-<label>Upload Profile Photo</label>
-<input
-  type="file"
-  id="photo"
-  name="photo"
-  accept="image/*"
-  required
->
-
-       
-<img id="photoPreview"
-     style="display:none;width:120px;height:150px;
-            object-fit:cover;border-radius:10px;
-            margin-top:10px;border:2px solid #ddd;">
+</div> <!-- ✅ CLOSE CHILDREN SECTION HERE -->
 
 
+  <!-- PHYSICAL DETAILS -->
+  <label>Body Type</label>
+  <select id="body_type" name="body_type" required>
+    <option value="">Select</option>
+    <option value="Slim">Slim</option>
+    <option value="Average">Average</option>
+    <option value="Athletic">Athletic</option>
+    <option value="Heavy">Heavy</option>
+  </select>
 
-  <button id="submitBtn" type="submit">Submit</button>
-  <button id="backBtn" type="button" onclick="goLogin()">Back to Login</button>
+  <label>Complexion</label>
+  <select id="complexion" name="complexion" required>
+    <option value="">Select</option>
+    <option value="Very Fair">Very Fair</option>
+    <option value="Fair">Fair</option>
+    <option value="Wheatish">Wheatish</option>
+    <option value="Wheatish Medium">Wheatish Medium</option>
+    <option value="Dark">Dark</option>
+  </select>
 
-  <div id="status"></div>
-</form>
+  <!-- EDUCATION & JOB -->
+  <label>Education</label>
+  <input id="education" name="education" required>
+
+  <label>Job</label>
+  <input id="job" name="job" required>
+
+  <!-- DISABILITY -->
+  <label>Disability Details</label>
+  <select id="disability" name="disability">
+    <option value="None">None</option>
+    <option value="Deaf">Deaf</option>
+    <option value="Blind">Blind</option>
+    <option value="Low Vision">Low Vision</option>
+    <option value="Physical Disabilities">Physical Disabilities</option>
+    <option value="Learning Disabilities">Learning Disabilities</option>
+    <option value="Health Issue">Health Issue</option>
+    <option value="Other">Other</option>
+  </select>
+
+  <!-- FAMILY -->
+  <label>Family Type</label>
+  <select id="family_type" name="family_type">
+    <option value="Nuclear">Nuclear</option>
+    <option value="Joint">Joint</option>
+  </select>
+
+  <label>Number of Brothers</label>
+  <input type="number" id="brothers" name="brothers" min="0">
+
+  <label>Number of Sisters</label>
+  <input type="number" id="sisters" name="sisters" min="0">
+
+  <label>Family Status</label>
+  <select id="family_status" name="family_status">
+    <option value="Poor">Poor</option>
+    <option value="Middle Class">Middle Class</option>
+    <option value="Upper Middle">Upper Middle</option>
+    <option value="Rich">Rich</option>
+  </select>
+
+  <!-- ADDRESS -->
+  <label>Native Place</label>
+  <input id="native_place" name="native_place" required>
+
+  <label>Full Address</label>
+  <textarea id="address" name="address" required></textarea>
+
+  <label>District</label>
+  <select id="district" name="district" required>
+    <option value="">Select</option>
+    <option value="Thiruvananthapuram">Thiruvananthapuram</option>
+    <option value="Kollam">Kollam</option>
+    <option value="Pathanamthitta">Pathanamthitta</option>
+    <option value="Alappuzha">Alappuzha</option>
+    <option value="Kottayam">Kottayam</option>
+    <option value="Idukki">Idukki</option>
+    <option value="Ernakulam">Ernakulam</option>
+    <option value="Thrissur">Thrissur</option>
+    <option value="Palakkad">Palakkad</option>
+    <option value="Malappuram">Malappuram</option>
+    <option value="Kozhikode">Kozhikode</option>
+    <option value="Wayanad">Wayanad</option>
+    <option value="Kannur">Kannur</option>
+    <option value="Kasaragod">Kasaragod</option>
+    <option value="Outside Kerala">Outside Kerala</option>
+  </select>
+
+  <!-- CONTACT -->
+  <label>Contact Number 1</label>
+  <input id="contact1" name="contact1" required>
+
+  <label>Contact Number 2</label>
+  <input id="contact2" name="contact2">
+
+  <label>About Me</label>
+  <textarea id="about" name="about"></textarea>
+
+  <button type="button" class="nextBtn" onclick="goStep3()">Next</button>
+</div>
+
+<!-- STEP 3 -->
+<div id="step3" class="hidden">
+  <h3>Upload Profile Photo</h3>
+  <input type="file" id="photo" accept="image/*">
+  <img id="photoPreview">
+  <button class="submitBtn" onclick="finalSubmit()">Final Submit</button>
+</div>
 
 </div>
+
+<!-- Firebase SDK (COMPAT VERSION) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
 <script>
-/* DOB fill */
-(function(){
-  const d=document.querySelector("select[name=day]");
-  const m=document.querySelector("select[name=month]");
-  const y=document.querySelector("select[name=year]");
-  for(let i=1;i<=31;i++) d.innerHTML+=`<option>${i}</option>`;
-  for(let i=1;i<=12;i++) m.innerHTML+=`<option>${i}</option>`;
-  for(let i=new Date().getFullYear();i>=1960;i--) y.innerHTML+=`<option>${i}</option>`;
-})();
+/* 🔥 REPLACE WITH YOUR CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyDEV5QfsK3tTWxpOh45678pBZwtoZ0wzMU",
+  authDomain: "kmarry-5ce8a.firebaseapp.com",
+  projectId: "kmarry-5ce8a",
+  storageBucket: "kmarry-5ce8a.firebasestorage.app",
+  messagingSenderId: "577718422582",
+  appId: "1:577718422582:web:f043d44aa6616a5af25c97"
+};
+firebase.initializeApp(firebaseConfig);
 
-
-
-
-function goLogin(){
-  window.location.href="index.html";
-}
-
-
+const auth = firebase.auth();
+const db = firebase.firestore();
+const storage = firebase.storage();
 </script>
-<script>
-document.getElementById("photo").addEventListener("change", function () {
-  const file = this.files[0];
-  if (!file) return;
 
-  const img = document.getElementById("photoPreview");
-  img.src = URL.createObjectURL(file);
-  img.style.display = "block";
+<script>
+/* Recaptcha */
+window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+  'size': 'normal'
 });
-</script>
 
-<script>
-document.getElementById("regForm").addEventListener("submit", function(e){
-  e.preventDefault();
+	let resendTimer;
+let countdown = 30;
+	
+/* Send OTP */
+function sendOTP(){
 
-  const form = this;
-  const status = document.getElementById("status");
+  const countryCode = document.getElementById("countryCode").value;
+  const phoneNumber = document.getElementById("phoneInput").value.trim();
+  const resendBtn = document.getElementById("resendBtn");
 
-  // 🔥 REQUIRED FIELD CHECK
-  if (!form.checkValidity()) {
-    status.textContent = "❌ Please fill required fields";
-    status.style.color = "red";
+  if(phoneNumber.length < 6){
+    alert("Enter valid phone number");
     return;
   }
 
-  status.textContent = "✅ All required fields filled";
-  status.style.color = "green";
+  const fullPhone = countryCode + phoneNumber;
 
-  // 🔥 Firebase submit logic later
+  // Disable resend button immediately
+  resendBtn.disabled = true;
+
+  auth.signInWithPhoneNumber(fullPhone, window.recaptchaVerifier)
+  .then(function(result){
+
+    window.confirmationResult = result;
+    alert("OTP Sent ✅");
+
+    // 🔥 Start 30 second timer
+    startResendTimer();
+
+  }).catch(function(error){
+    resendBtn.disabled = false; // re-enable if failed
+    alert(error.message);
+  });
+}
+function resendOTP(){
+
+  const btn = document.getElementById("resendBtn");
+
+  // Safety check: timer finished ആണോ?
+  if(btn.disabled){
+    return; // timer running → do nothing
+  }
+
+  // Clear old timer (if any)
+  if(resendTimer){
+    clearInterval(resendTimer);
+  }
+
+  // Call sendOTP again
+  sendOTP();
+
+}
+
+/* Verify OTP */
+function verifyOTP(){
+  const otp = document.getElementById("otpInput").value;
+  confirmationResult.confirm(otp)
+  .then(function(result){
+    alert("Phone Verified 🎉");
+    document.getElementById("step1").classList.add("hidden");
+    document.getElementById("step2").classList.remove("hidden");
+  }).catch(function(){
+    alert("Invalid OTP ❌");
+  });
+}
+
+/* Step 2 → Step 3 */
+function goStep3(){
+
+  const requiredFields = [
+    "name","dob_day","dob_month","dob_year",
+    "gender","religion","caste","marital_status",
+    "education","job","native_place","address","district","contact1"
+  ];
+
+  for(let id of requiredFields){
+    if(!document.getElementById(id).value){
+      alert("Please fill all required fields");
+      return;
+    }
+  }
+
+  document.getElementById("step2").classList.add("hidden");
+  document.getElementById("step3").classList.remove("hidden");
+}
+
+/* Photo Preview */
+document.getElementById("photo").addEventListener("change", function(){
+  const file = this.files[0];
+  if(file){
+    const img = document.getElementById("photoPreview");
+    img.src = URL.createObjectURL(file);
+    img.style.display="block";
+  }
 });
+function startResendTimer(){
+
+  const btn = document.getElementById("resendBtn");
+
+  countdown = 30;
+  btn.disabled = true;
+  btn.innerText = "Resend OTP (" + countdown + "s)";
+
+  resendTimer = setInterval(function(){
+
+    countdown--;
+    btn.innerText = "Resend OTP (" + countdown + "s)";
+
+    if(countdown <= 0){
+      clearInterval(resendTimer);
+      btn.disabled = false;
+      btn.innerText = "Resend OTP";
+    }
+
+  },1000);
+
+}
+
+
+	
+/* Final Submit */
+async function finalSubmit(){
+
+  const user = auth.currentUser;
+  if(!user){
+    alert("User not logged in");
+    return;
+  }
+
+  // 🔍 Check if already registered
+  const existing = await db.collection("users").doc(user.uid).get();
+  if(existing.exists){
+    alert("You are already registered.");
+    return;
+  }
+
+  // 📷 File validation
+  const file = document.getElementById("photo").files[0];
+  if(!file){
+    alert("Please upload profile photo");
+    return;
+  }
+
+  if(file.size > 3 * 1024 * 1024){
+    alert("Image size must be less than 3MB");
+    return;
+  }
+
+  try{
+
+    // 📤 Upload Image
+    const storageRef = storage.ref("profiles/" + user.uid + ".jpg");
+    await storageRef.put(file);
+
+    const url = await storageRef.getDownloadURL();
+
+    // 📅 DOB format
+    const dob =
+      document.getElementById("dob_day").value + "-" +
+      document.getElementById("dob_month").value + "-" +
+      document.getElementById("dob_year").value;
+
+    // 💾 Save to Firestore
+    await db.collection("users").doc(user.uid).set({
+
+      name: document.getElementById("name").value.trim(),
+      phone: user.phoneNumber,
+      dob: dob,
+
+      gender: document.getElementById("gender").value,
+      marital_status: document.getElementById("marital_status").value,
+      children_count: document.getElementById("children_count")?.value || 0,
+      children_with: document.getElementById("children_with")?.value || "",
+
+      height: document.getElementById("height").value,
+      religion: document.getElementById("religion").value,
+      caste: document.getElementById("caste").value,
+
+      body_type: document.getElementById("body_type").value,
+      complexion: document.getElementById("complexion").value,
+
+      education: document.getElementById("education").value,
+      job: document.getElementById("job").value,
+
+      disability: document.getElementById("disability").value,
+
+      family_type: document.getElementById("family_type").value,
+      brothers: document.getElementById("brothers").value || 0,
+      sisters: document.getElementById("sisters").value || 0,
+      family_status: document.getElementById("family_status").value,
+
+      native_place: document.getElementById("native_place").value,
+      address: document.getElementById("address").value,
+      district: document.getElementById("district").value,
+
+      contact1: document.getElementById("contact1").value,
+      contact2: document.getElementById("contact2").value || "",
+      about: document.getElementById("about").value || "",
+
+      photo: url,
+      status: "Pending",   // 🔐 Admin approval ready
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+
+    });
+
+    alert("Registration Completed ✅");
+    window.location.href = "index.html";
+
+
+  }catch(error){
+    console.error(error);
+    alert("Something went wrong. Try again.");
+  }
+
+}
+
+</script>
+	
+<script>
+function toggleChildrenFields(){
+  const status = document.getElementById("marital_status").value;
+  const section = document.getElementById("childrenSection");
+
+  if(status === "Divorced" || status === "Widowed" || status === "Separated"){
+    section.classList.remove("hidden");
+  }else{
+    section.classList.add("hidden");
+  }
+}
+</script>
+	
+<script>
+(function fillDOB(){
+
+  const day = document.getElementById("dob_day");
+  const month = document.getElementById("dob_month");
+  const year = document.getElementById("dob_year");
+
+  for(let i=1;i<=31;i++){
+    day.innerHTML += `<option value="${i}">${i}</option>`;
+  }
+
+  for(let i=1;i<=12;i++){
+    month.innerHTML += `<option value="${i}">${i}</option>`;
+  }
+
+  const currentYear = new Date().getFullYear();
+  for(let i=currentYear;i>=1960;i--){
+    year.innerHTML += `<option value="${i}">${i}</option>`;
+  }
+
+})();
 </script>
 
 <script>
@@ -403,6 +612,5 @@ function updateCasteOptions() {
   });
 }
 </script>
-
 </body>
 </html>

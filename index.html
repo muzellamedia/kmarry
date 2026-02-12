@@ -31,6 +31,44 @@ body{
                no-repeat center center / cover;
   }
 }
+.login-btn{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:30px;
+  background:#00b050;
+  color:#fff;
+  font-size:17px;
+  font-weight:bold;
+  cursor:pointer;
+  position:relative;
+  overflow:hidden;
+}
+
+.login-loader{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+
+.dot{
+  width:8px;
+  height:8px;
+  background:#fff;
+  border-radius:50%;
+  animation:bounce 1.2s infinite ease-in-out;
+}
+
+.dot:nth-child(2){animation-delay:0.2s}
+.dot:nth-child(3){animation-delay:0.4s}
+
+@keyframes bounce{
+  0%,80%,100%{transform:scale(0)}
+  40%{transform:scale(1)}
+}
 
 #loginBox{
   background:none;
@@ -108,6 +146,7 @@ button{
 
 <div id="loginBox">
 
+
 <img src="https://lh3.googleusercontent.com/d/1pW_lK0eIhREggZuuR8SX89Ye3xQbptG7"
      style="width:180px;margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;">
 
@@ -153,12 +192,22 @@ button{
 </div>
 
 
-<button id="loginBtn" class="login-btn" onclick="goOTP()">
-<span>Login</span>
-<div class="login-dots" style="display:none;">
-<i></i><i></i><i></i><i></i>
-</div>
+<button id="loginBtn" class="login-btn">
+  <span id="loginText">Login</span>
+  <div class="login-loader" id="loginLoader" style="display:none;">
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
 </button>
+<input id="otp"
+       placeholder="Enter OTP"
+       style="display:none;
+              width:100%;
+              padding:14px;
+              border-radius:10px;
+              margin-top:12px;">
+
 
 <button class="register-btn"
 onclick="location.href='register.html'">
@@ -170,29 +219,125 @@ Register Now
 </div>
 </div>
 
-<script>
-function goOTP(){
+<script type="module">
 
-  const phone=document.getElementById("phone").value.trim();
-  const btn=document.getElementById("loginBtn");
-  const dots=btn.querySelector(".login-dots");
-  const msg=document.getElementById("msg");
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { 
+  getAuth, 
+  RecaptchaVerifier, 
+  signInWithPhoneNumber 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { 
+  getFirestore, 
+  doc, 
+  getDoc 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  msg.textContent="";
+/* 🔑 Your Firebase Config */
+const firebaseConfig = {
+  apiKey: "AIzaSyDEV5QfsK3tTWxpOh45678pBZwtoZ0wzMU",
+  authDomain: "kmarry-5ce8a.firebaseapp.com",
+  projectId: "kmarry-5ce8a",
+  storageBucket: "kmarry-5ce8a.appspot.com",
+  messagingSenderId: "577718422582",
+  appId: "1:577718422582:web:f043d44aa6616a5af25c97"
+};
 
-  if(phone.length!==10){
-    msg.textContent="Please enter valid phone number";
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+/* 🌍 Global */
+let confirmationResult;
+
+/* 🔐 Invisible reCAPTCHA */
+window.recaptchaVerifier = new RecaptchaVerifier(
+  "loginBtn",
+  {
+    size: "invisible",
+    callback: () => {}
+  },
+  auth
+);
+
+await window.recaptchaVerifier.render();
+
+
+const loginBtn   = document.getElementById("loginBtn");
+const loginText  = document.getElementById("loginText");
+const loginLoader= document.getElementById("loginLoader");
+const otpInput   = document.getElementById("otp");
+const msg        = document.getElementById("msg");
+
+loginBtn.onclick = async () => {
+
+  const phone = document.getElementById("phone").value.trim();
+  const country = document.getElementById("countryCode").value;
+
+  if(phone.length < 6){
+    msg.textContent = "Enter valid phone number";
     return;
   }
 
-  btn.classList.add("loading");
-  dots.style.display="flex";
+  /* 🔄 Loading */
+  loginText.style.display = "none";
+  loginLoader.style.display = "flex";
+  loginBtn.disabled = true;
 
-  setTimeout(()=>{
-    sessionStorage.setItem("phone","+91"+phone);
-    location.href="otp.html";
-  },1200);
+  try {
+
+    const fullPhone = country + phone;
+
+    confirmationResult =
+      await signInWithPhoneNumber(auth, fullPhone, window.recaptchaVerifier);
+
+    loginText.style.display = "block";
+    loginLoader.style.display = "none";
+    loginBtn.disabled = false;
+
+    otpInput.style.display = "block";
+    loginText.textContent = "Verify OTP";
+
+    loginBtn.onclick = verifyOTP;
+
+    msg.textContent = "OTP Sent";
+
+  } catch (e) {
+    console.error(e);
+    msg.textContent = "OTP Failed";
+    loginText.style.display = "block";
+    loginLoader.style.display = "none";
+    loginBtn.disabled = false;
+  }
+};
+
+async function verifyOTP() {
+
+  const code = otpInput.value.trim();
+
+  if(code.length !== 6){
+    msg.textContent = "Enter valid OTP";
+    return;
+  }
+
+  try {
+
+    const res = await confirmationResult.confirm(code);
+    const uid = res.user.uid;
+
+    const snap = await getDoc(doc(db,"profiles",uid));
+
+    if(snap.exists()){
+      location.href = "search.html";
+    } else {
+      location.href = "register.html";
+    }
+
+  } catch (e) {
+    msg.textContent = "Wrong OTP";
+  }
 }
+
 </script>
 
 </body>

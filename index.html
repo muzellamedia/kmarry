@@ -1,195 +1,198 @@
-
 <!DOCTYPE html>
 <html lang="ml">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kmarry – OTP Login</title>
+<title>Kmarry – Login</title>
 
 <style>
 body{
   margin:0;
-  height:100vh;
   font-family:Arial,Helvetica,sans-serif;
-  background:#003845;
+  overflow-x:hidden;
+}
+
+/* 🔥 BACKGROUND MOBILE */
+#pageLogin{
   display:flex;
-  align-items:center;
   justify-content:center;
+  align-items:flex-start;   /* 🔥 center നിന്ന് മുകളിലേക്ക് */
+  padding-top:70px;         /* 🔥 എത്ര മുകളിൽ വേണമെന്ന് ഇവിടെ adjust ചെയ്യാം */
+  height:100vh;
+
+  background:url('https://lh3.googleusercontent.com/d/1qxE8D7quWxDMuZUvmbo_gdWV0zH4QWHl')
+             no-repeat center center / cover;
 }
-.box{
-  background:#ffffff;
+
+/* 🔥 DESKTOP BACKGROUND */
+@media (min-width:1024px){
+  #pageLogin{
+    background:url('https://lh3.googleusercontent.com/d/1y32Yv9BtQsuP8D2MCK8FFR780e3bugtg')
+               no-repeat center center / cover;
+  }
+}
+
+#loginBox{
+  background:none;
   width:100%;
-  max-width:360px;
-  padding:28px;
-  border-radius:14px;
-  box-shadow:0 10px 25px rgba(0,0,0,.25);
-}
-h3{text-align:center;margin-bottom:18px}
-
-/* 🔥 Phone row */
-.phone-row{
-  display:flex;
-  gap:6px;
+  max-width:420px;
+  padding:36px 30px;
+  text-align:center;
+  transform: scale(1.05);
+  color:#fff;
 }
 
-.phone-row select{
-  width:95px;
+input,select{
+  width:100%;
   padding:12px;
-  font-size:14px;
-}
-
-.phone-row input{
-  flex:1;
-  padding:12px;
+  border:none;
+  border-radius:6px;
   font-size:15px;
+  margin-bottom:12px;
+  background:rgba(255,255,255,0.9);
+  color:#333;
 }
 
 button{
   width:100%;
-  padding:12px;
-  font-size:16px;
-  font-weight:bold;
+  padding:13px;
   border:none;
   border-radius:25px;
+  font-size:17px;
+  font-weight:bold;
   cursor:pointer;
+  margin-top:10px;
 }
-#sendBtn{background:#00b050;color:#fff}
-#verifyBtn{background:#0d6efd;color:#fff;display:none}
-#otp{display:none}
-#msg{margin-top:10px;font-size:14px;text-align:center}
+
+.login-btn{background:#00b050;color:#fff}
+.register-btn{background:#001a66;color:#fff}
+
+.login-btn.loading{
+  pointer-events:none;
+  background:#111;
+}
+
+.login-btn.loading span{visibility:hidden;}
+
+.login-dots{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+}
+
+.login-dots i{
+  width:10px;height:10px;border-radius:50%;
+  animation:bounce 1.2s infinite ease-in-out;
+}
+
+.login-dots i:nth-child(1){background:#ffd43b;animation-delay:0s}
+.login-dots i:nth-child(2){background:#ff4d6d;animation-delay:.15s}
+.login-dots i:nth-child(3){background:#4dabf7;animation-delay:.3s}
+.login-dots i:nth-child(4){background:#da77f2;animation-delay:.45s}
+
+@keyframes bounce{
+  0%,80%,100%{transform:scale(0);opacity:.3}
+  40%{transform:scale(1);opacity:1}
+}
+
+#msg{margin-top:10px;font-size:14px;color:#ff8080}
 </style>
 </head>
 
 <body>
 
-<div class="box">
-  <h3>📱 OTP Login</h3>
+<div id="pageLogin">
 
-  <!-- 🔥 COUNTRY + PHONE -->
-  <div class="phone-row">
-    <select id="countryCode">
-      <option value="+91">🇮🇳 +91</option>
+<div id="loginBox">
+
+<img src="https://lh3.googleusercontent.com/d/1pW_lK0eIhREggZuuR8SX89Ye3xQbptG7"
+     style="width:180px;margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;">
+
+<h3 style="color:#008000;font-size:13px;margin-bottom:12px;">
+വിവാഹം വിരൽത്തുമ്പിൽ
+</h3>
+
+<a href="https://drive.usercontent.google.com/download?id=1D7k_BegQPjgutF8Sjwi2vaWl4lcX_Vex&export=download"
+   target="_blank"
+   style="display:inline-block;background:#990808;color:#fff;
+   text-decoration:none;padding:10px 18px;border-radius:20px;
+   font-size:14px;font-weight:bold;margin-bottom:18px;">
+📲 Download Android App
+</a>
+<div style="display:flex;gap:8px;margin-bottom:14px;">
+
+  <select id="countryCode" style="
+    width:35%;
+    padding:12px;
+    border-radius:10px;
+    font-size:15px;
+  ">
+    <option value="+91">🇮🇳 +91</option>
       <option value="+971">🇦🇪 +971</option>
       <option value="+966">🇸🇦 +966</option>
       <option value="+965">🇰🇼 +965</option>
       <option value="+974">🇶🇦 +974</option>
       <option value="+968">🇴🇲 +968</option>
-      <option value="+1">🇺🇸 +1</option>
-      <option value="+44">🇬🇧 +44</option>
-    </select>
+  </select>
 
-    <input id="phone" placeholder="Phone number"
-           maxlength="12" inputmode="numeric">
-  </div>
+  <input type="tel"
+    id="phone"
+    placeholder="Enter phone number"
+    style="
+      width:65%;
+      padding:12px;
+      border-radius:10px;
+      font-size:16px;
+      color:#000;
+    "
+  >
 
-  <div id="recaptcha-container"></div>
-
-  <button id="sendBtn">Send OTP</button>
-
-  <input id="otp" placeholder="Enter OTP">
-
-  <button id="verifyBtn">Verify OTP</button>
-
-  <div id="msg"></div>
 </div>
 
-<script type="module">
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { 
-  getAuth, 
-  RecaptchaVerifier, 
-  signInWithPhoneNumber 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { 
-  getFirestore, 
-  doc, 
-  getDoc 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-;
+<button id="loginBtn" class="login-btn" onclick="goOTP()">
+<span>Login</span>
+<div class="login-dots" style="display:none;">
+<i></i><i></i><i></i><i></i>
+</div>
+</button>
 
-/* 🔑 YOUR firebaseConfig */
-const firebaseConfig = {
-  apiKey: "AIzaSyDEV5QfsK3tTWxpOh45678pBZwtoZ0wzMU",
-  authDomain: "kmarry-5ce8a.firebaseapp.com",
-  projectId: "kmarry-5ce8a",
-  storageBucket: "kmarry-5ce8a.firebasestorage.app",
-  messagingSenderId: "577718422582",
-  appId: "1:577718422582:web:f043d44aa6616a5af25c97"
-};
+<button class="register-btn"
+onclick="location.href='register.html'">
+Register Now
+</button>
 
-/* 🚀 Init */
-const app  = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db   = getFirestore(app);
+<div id="msg"></div>
 
-/* 🌍 GLOBAL */
-let confirmationResult;
+</div>
+</div>
 
-/* 🔐 reCAPTCHA (invisible) */
-window.recaptchaVerifier = new RecaptchaVerifier(
-  auth,
-  "recaptcha-container",
-  { size: "invisible" }
-);
+<script>
+function goOTP(){
 
-/* 📤 SEND OTP */
-document.getElementById("sendBtn").onclick = async () => {
+  const phone=document.getElementById("phone").value.trim();
+  const btn=document.getElementById("loginBtn");
+  const dots=btn.querySelector(".login-dots");
+  const msg=document.getElementById("msg");
 
-  const phone = document.getElementById("phone").value.trim();
-  const msg   = document.getElementById("msg");
+  msg.textContent="";
 
-  if(phone.length !== 10){
-    msg.textContent="❌ Enter valid phone number";
+  if(phone.length!==10){
+    msg.textContent="Please enter valid phone number";
     return;
   }
 
-  msg.textContent="Sending OTP...";
-  const fullPhone = "+91" + phone;
+  btn.classList.add("loading");
+  dots.style.display="flex";
 
-  try{
-    confirmationResult =
-      await signInWithPhoneNumber(auth, fullPhone, window.recaptchaVerifier);
-
-    document.getElementById("otp").style.display="block";
-    document.getElementById("verifyBtn").style.display="block";
-    msg.textContent="✅ OTP sent";
-  }catch(e){
-    console.error(e);
-    msg.textContent="❌ OTP failed";
-  }
-};
-
-/* ✅ VERIFY OTP */
-document.getElementById("verifyBtn").onclick = async () => {
-
-  const code = document.getElementById("otp").value.trim();
-  const msg  = document.getElementById("msg");
-
-  if(code.length !== 6){
-    msg.textContent="❌ Enter valid OTP";
-    return;
-  }
-
-  try{
-    const res = await confirmationResult.confirm(code);
-    const uid = res.user.uid;
-
-    /* 🔎 CHECK PROFILE */
-    const snap = await getDoc(doc(db,"profiles",uid));
-
-    if(snap.exists()){
-      location.href="search.html";
-    }else{
-      location.href="register.html";
-    }
-
-  }catch(e){
-    console.error(e);
-    msg.textContent="❌ Wrong OTP";
-  }
-};
-
+  setTimeout(()=>{
+    sessionStorage.setItem("phone","+91"+phone);
+    location.href="otp.html";
+  },1200);
+}
 </script>
 
 </body>

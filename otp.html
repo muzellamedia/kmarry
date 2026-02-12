@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enter OTP – Kmarry</title>
+
+<style>
+body{
+  margin:0;
+  height:100vh;
+  font-family:Arial;
+  background:#003845;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.box{
+  background:#fff;
+  width:100%;
+  max-width:360px;
+  padding:28px;
+  border-radius:16px;
+  box-shadow:0 15px 30px rgba(0,0,0,.3);
+  text-align:center;
+}
+
+input{
+  width:100%;
+  padding:12px;
+  font-size:16px;
+  margin-bottom:12px;
+}
+
+button{
+  width:100%;
+  padding:13px;
+  border:none;
+  border-radius:25px;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+  background:#0d6efd;
+  color:#fff;
+}
+
+#msg{margin-top:10px;font-size:14px}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+
+<h3>🔐 Enter OTP</h3>
+
+<input id="otp" placeholder="Enter 6 digit OTP" maxlength="6">
+
+<button onclick="verifyOTP()">Verify</button>
+
+<div id="msg"></div>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, PhoneAuthProvider, signInWithCredential }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "YOUR_NEW_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+window.verifyOTP = async function(){
+
+  const otp = document.getElementById("otp").value;
+  const msg = document.getElementById("msg");
+
+  const verificationId =
+    sessionStorage.getItem("verificationId");
+
+  if(!verificationId){
+    msg.textContent="Session expired";
+    return;
+  }
+
+  try{
+    const credential =
+      PhoneAuthProvider.credential(
+        verificationId,
+        otp
+      );
+
+    const res =
+      await signInWithCredential(auth, credential);
+
+    location.href="search.html";
+
+  }catch(e){
+    console.error(e);
+    msg.textContent="❌ Wrong OTP";
+  }
+};
+
+</script>
+
+</body>
+</html>

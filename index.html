@@ -168,16 +168,16 @@ button{
     padding:12px;
     border-radius:10px;
     font-size:15px;
-  ">
+">
     <option value="+91">🇮🇳 +91</option>
-      <option value="+971">🇦🇪 +971</option>
-      <option value="+966">🇸🇦 +966</option>
-      <option value="+965">🇰🇼 +965</option>
-      <option value="+974">🇶🇦 +974</option>
-      <option value="+968">🇴🇲 +968</option>
-  </select>
+    <option value="+971">🇦🇪 +971</option>
+    <option value="+966">🇸🇦 +966</option>
+    <option value="+965">🇰🇼 +965</option>
+    <option value="+974">🇶🇦 +974</option>
+    <option value="+968">🇴🇲 +968</option>
+</select>
 
-  <input type="tel"
+<input type="tel"
     id="phone"
     placeholder="Enter phone number"
     style="
@@ -187,10 +187,9 @@ button{
       font-size:16px;
       color:#000;
     "
-  >
+>
 
 </div>
-
 
 <button id="loginBtn" class="login-btn">
   <span id="loginText">Login</span>
@@ -198,9 +197,11 @@ button{
     <div class="dot"></div>
     <div class="dot"></div>
     <div class="dot"></div>
-  </div>
+  </div> <!-- ✅ loader close -->
 	<div id="recaptcha-container"></div>
-</button>
+
+</button> <!-- ✅ button close -->
+
 <input id="otp"
        placeholder="Enter OTP"
        style="display:none;
@@ -208,7 +209,6 @@ button{
               padding:14px;
               border-radius:10px;
               margin-top:12px;">
-
 
 <button class="register-btn"
 onclick="location.href='register.html'">
@@ -253,15 +253,14 @@ let confirmationResult;
 /* 🔐 Invisible reCAPTCHA */
 /* 🔐 Invisible reCAPTCHA */
 window.recaptchaVerifier = new RecaptchaVerifier(
+  auth,
   "recaptcha-container",
   {
     size: "invisible"
-  },
-  auth
+  }
 );
 
-
-window.recaptchaVerifier.render();
+window.recaptchaVerifier.render().catch(console.error);
 
 
 
@@ -271,67 +270,92 @@ const loginLoader= document.getElementById("loginLoader");
 const otpInput   = document.getElementById("otp");
 const msg        = document.getElementById("msg");
 
+	
+/* Global Flag */
+let isOTPSent = false;
+
 loginBtn.onclick = async () => {
-	console.log("Login clicked");
+
+  if (!isOTPSent) {
+
+    // --- SEND OTP ---
+    const phone = document.getElementById("phone").value.trim();
+    const country = document.getElementById("countryCode").value;
+
+    if (phone.length < 6) {
+      msg.textContent = "Enter valid phone number";
+      return;
+    }
+
+    loginText.style.display = "none";
+    loginLoader.style.display = "flex";
+    loginBtn.disabled = true;
+
+    try {
+      const fullPhone = country + phone;
+
+      if (!window.recaptchaVerifier) {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+          size: "invisible"
+        });
+      }
+
+      confirmationResult = await signInWithPhoneNumber(
+        auth,
+        fullPhone,
+        window.recaptchaVerifier
+      );
+
+      isOTPSent = true;
+
+      loginText.style.display = "block";
+      loginLoader.style.display = "none";
+      loginBtn.disabled = false;
+
+      otpInput.style.display = "block";
+      loginText.textContent = "Verify OTP";
+      msg.textContent = "OTP Sent";
+
+    } catch (e) {
+      console.error(e);
+      msg.textContent = "OTP Failed: " + e.message;
+      loginText.style.display = "block";
+      loginLoader.style.display = "none";
+      loginBtn.disabled = false;
+    }
+
+  } else {
+
+    // --- VERIFY OTP ---
+    await verifyOTP();
+
+  }
+};
 
 
-  const phone = document.getElementById("phone").value.trim();
-  const country = document.getElementById("countryCode").value;
 
-  if(phone.length < 6){
-    msg.textContent = "Enter valid phone number";
+// ✅ OTP Verify Function (Outside click function)
+async function verifyOTP() {
+
+  const code = otpInput.value.trim();
+
+  if (code.length !== 6) {
+    msg.textContent = "Enter valid OTP";
     return;
   }
 
-  /* 🔄 Loading */
   loginText.style.display = "none";
   loginLoader.style.display = "flex";
   loginBtn.disabled = true;
 
   try {
 
-    const fullPhone = country + phone;
-
-    confirmationResult =
-      await signInWithPhoneNumber(auth, fullPhone, window.recaptchaVerifier);
-
-    loginText.style.display = "block";
-    loginLoader.style.display = "none";
-    loginBtn.disabled = false;
-
-    otpInput.style.display = "block";
-    loginText.textContent = "Verify OTP";
-
-    loginBtn.onclick = verifyOTP;
-
-    msg.textContent = "OTP Sent";
-
-  } catch (e) {
-    console.error(e);
-    msg.textContent = "OTP Failed";
-    loginText.style.display = "block";
-    loginLoader.style.display = "none";
-    loginBtn.disabled = false;
-  }
-};
-
-async function verifyOTP() {
-
-  const code = otpInput.value.trim();
-
-  if(code.length !== 6){
-    msg.textContent = "Enter valid OTP";
-    return;
-  }
-
-  try {
-
     const res = await confirmationResult.confirm(code);
     const uid = res.user.uid;
 
-    const snap = await getDoc(doc(db,"profiles",uid));
+    const snap = await getDoc(doc(db, "profiles", uid));
 
-    if(snap.exists()){
+    if (snap.exists()) {
       location.href = "search.html";
     } else {
       location.href = "register.html";
@@ -339,8 +363,12 @@ async function verifyOTP() {
 
   } catch (e) {
     msg.textContent = "Wrong OTP";
+    loginText.style.display = "block";
+    loginLoader.style.display = "none";
+    loginBtn.disabled = false;
   }
 }
+
 
 </script>
 

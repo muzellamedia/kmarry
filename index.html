@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ml">
 <head>
@@ -24,12 +25,25 @@ body{
   box-shadow:0 10px 25px rgba(0,0,0,.25);
 }
 h3{text-align:center;margin-bottom:18px}
-input{
-  width:100%;
+
+/* 🔥 Phone row */
+.phone-row{
+  display:flex;
+  gap:6px;
+}
+
+.phone-row select{
+  width:95px;
   padding:12px;
-  margin-bottom:12px;
+  font-size:14px;
+}
+
+.phone-row input{
+  flex:1;
+  padding:12px;
   font-size:15px;
 }
+
 button{
   width:100%;
   padding:12px;
@@ -51,8 +65,22 @@ button{
 <div class="box">
   <h3>📱 OTP Login</h3>
 
-  <input id="phone" placeholder="Enter phone number"
-         maxlength="10" inputmode="numeric">
+  <!-- 🔥 COUNTRY + PHONE -->
+  <div class="phone-row">
+    <select id="countryCode">
+      <option value="+91">🇮🇳 +91</option>
+      <option value="+971">🇦🇪 +971</option>
+      <option value="+966">🇸🇦 +966</option>
+      <option value="+965">🇰🇼 +965</option>
+      <option value="+974">🇶🇦 +974</option>
+      <option value="+968">🇴🇲 +968</option>
+      <option value="+1">🇺🇸 +1</option>
+      <option value="+44">🇬🇧 +44</option>
+    </select>
+
+    <input id="phone" placeholder="Phone number"
+           maxlength="12" inputmode="numeric">
+  </div>
 
   <div id="recaptcha-container"></div>
 
@@ -67,7 +95,6 @@ button{
 
 <script type="module">
 
-/* 🔥 Firebase imports */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { 
   getAuth, 
@@ -79,6 +106,7 @@ import {
   doc, 
   getDoc 
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+;
 
 /* 🔑 YOUR firebaseConfig */
 const firebaseConfig = {
@@ -166,4 +194,3 @@ document.getElementById("verifyBtn").onclick = async () => {
 
 </body>
 </html>
-

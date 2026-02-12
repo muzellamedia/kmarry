@@ -191,17 +191,7 @@ button{
 
 </div>
 
-<button id="loginBtn" class="login-btn">
-  <span id="loginText">Login</span>
-  <div class="login-loader" id="loginLoader" style="display:none;">
-    <div class="dot"></div>
-    <div class="dot"></div>
-    <div class="dot"></div>
-  </div> <!-- ✅ loader close -->
-	<div id="recaptcha-container"></div>
-
-</button> <!-- ✅ button close -->
-
+<!-- ✅ OTP Input (Button ന് മുകളിൽ) -->
 <input id="otp"
        placeholder="Enter OTP"
        style="display:none;
@@ -210,6 +200,20 @@ button{
               border-radius:10px;
               margin-top:12px;">
 
+<!-- ✅ Login / Verify Button -->
+<button id="loginBtn" class="login-btn">
+  <span id="loginText">Login</span>
+  <div class="login-loader" id="loginLoader" style="display:none;">
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
+</button>
+
+<!-- ✅ Recaptcha Container (Button പുറത്തു വേണം) -->
+<div id="recaptcha-container"></div>
+
+<!-- ✅ Register Button -->
 <button class="register-btn"
 onclick="location.href='register.html'">
 Register Now

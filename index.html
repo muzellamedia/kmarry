@@ -199,6 +199,7 @@ button{
     <div class="dot"></div>
     <div class="dot"></div>
   </div>
+	<div id="recaptcha-container"></div>
 </button>
 <input id="otp"
        placeholder="Enter OTP"
@@ -238,11 +239,10 @@ const firebaseConfig = {
   apiKey: "AIzaSyDEV5QfsK3tTWxpOh45678pBZwtoZ0wzMU",
   authDomain: "kmarry-5ce8a.firebaseapp.com",
   projectId: "kmarry-5ce8a",
-  storageBucket: "kmarry-5ce8a.appspot.com",
+  storageBucket: "kmarry-5ce8a.firebasestorage.app",
   messagingSenderId: "577718422582",
   appId: "1:577718422582:web:f043d44aa6616a5af25c97"
 };
-
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
@@ -251,16 +251,18 @@ const db   = getFirestore(app);
 let confirmationResult;
 
 /* 🔐 Invisible reCAPTCHA */
+/* 🔐 Invisible reCAPTCHA */
 window.recaptchaVerifier = new RecaptchaVerifier(
-  "loginBtn",
+  "recaptcha-container",
   {
-    size: "invisible",
-    callback: () => {}
+    size: "invisible"
   },
   auth
 );
 
-await window.recaptchaVerifier.render();
+
+window.recaptchaVerifier.render();
+
 
 
 const loginBtn   = document.getElementById("loginBtn");
@@ -270,6 +272,8 @@ const otpInput   = document.getElementById("otp");
 const msg        = document.getElementById("msg");
 
 loginBtn.onclick = async () => {
+	console.log("Login clicked");
+
 
   const phone = document.getElementById("phone").value.trim();
   const country = document.getElementById("countryCode").value;

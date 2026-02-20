@@ -810,21 +810,7 @@ function updateCasteOptions() {
      ===================== -->
 <div id="pageMyProfile" style="display:none;">
 
-  <!-- 🔙 BACK BUTTON (OUTSIDE profile card) -->
-  <div style="text-align:center;margin-bottom:15px;">
-    <button onclick="backToHomeFromProfile()"
-      style="
-        background:#6c757d;
-        color:#fff;
-        padding:10px 18px;
-        border:none;
-        border-radius:8px;
-        font-size:15px;
-        font-weight:bold;
-      ">
-      🔙 Back to Home
-    </button>
-  </div>
+  
 
   <!-- 🔄 PROFILE CONTENT (ONLY THIS gets hide/show) -->
   <div id="myProfileSection" class="my-profile" style="display:none;">
@@ -855,7 +841,21 @@ function updateCasteOptions() {
            box-shadow:0 0 6px rgba(0,0,0,0.1);
          ">
     </div>
-
+<!-- 🔙 BACK BUTTON (OUTSIDE profile card) -->
+  <div style="text-align:center;margin-bottom:15px;">
+    <button onclick="backToHomeFromProfile()"
+      style="
+        background:#6c757d;
+        color:#fff;
+        padding:10px 18px;
+        border:none;
+        border-radius:8px;
+        font-size:15px;
+        font-weight:bold;
+      ">
+      🔙 Back to Home
+    </button>
+  </div>
   </div>
 
 </div>
@@ -3587,6 +3587,5 @@ async function loadProfilesFully() {
   </script>
   </body>
   </html>
-
 
 

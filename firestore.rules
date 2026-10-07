@@ -2,6 +2,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
+    function activePremium() {
+      let subscription = /databases/$(database)/documents/premiumSubscriptions/$(request.auth.uid);
+      return exists(subscription) && get(subscription).data.activeUntil > request.time;
+    }
+    function viewerIsNotMan() {
+      let profile = /databases/$(database)/documents/profiles/$(request.auth.uid);
+      return exists(profile) && get(profile).data.gender != 'Man';
+    }
     function acceptedMatch(otherUid) {
       let sent = /databases/$(database)/documents/interests/$(request.auth.uid + '_' + otherUid);
       let received = /databases/$(database)/documents/interests/$(otherUid + '_' + request.auth.uid);
@@ -11,15 +19,28 @@ service cloud.firestore {
 
     match /profiles/{uid} {
       allow read: if signedIn();
-      allow create, update, delete: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid;
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.gender == resource.data.gender;
+      allow delete: if false;
     }
 
     match /privateProfiles/{uid} {
       allow get: if signedIn()
-        && (request.auth.uid == uid || acceptedMatch(uid));
+        && (request.auth.uid == uid
+          || (acceptedMatch(uid) && (viewerIsNotMan() || activePremium())));
       allow list: if false;
       allow create, update: if signedIn() && request.auth.uid == uid;
       allow delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /premiumSubscriptions/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+
+    match /premiumRequests/{uid} {
+      allow read, write: if false;
     }
 
     match /interests/{interestId} {

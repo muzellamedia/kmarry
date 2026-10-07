@@ -23,7 +23,12 @@ service cloud.firestore {
     }
 
     match /interests/{interestId} {
-      allow get, list: if signedIn()
+      // A missing deterministic interest document is safe to read; it contains no data.
+      // This lets clients check a pair's interest before creating or viewing contacts.
+      allow get: if signedIn() && (resource == null
+        || resource.data.senderUid == request.auth.uid
+        || resource.data.recipientUid == request.auth.uid);
+      allow list: if signedIn()
         && (resource.data.senderUid == request.auth.uid
           || resource.data.recipientUid == request.auth.uid);
       allow create: if signedIn()

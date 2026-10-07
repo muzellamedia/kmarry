@@ -171,12 +171,12 @@
       try{const p=cachedProfiles.find(item=>item.uid===uid)||((await getDoc(profileRef(uid))).data());if(!p)return alert('Profile not found.');
         const photo=p.photoUrl?`<img class="profile-photo" src="${safe(p.photoUrl)}" alt="${safe(p.name)}" onclick="openPhoto(this.src)" style="cursor:zoom-in">`:'<div class="placeholder profile-photo">🌷</div>';
         const fields=[['Age',p.age],['Gender',p.gender],['Place',p.place],['District',p.district],['State',p.state],['Height',p.height],['Religion',p.religion],['Caste / community',p.community],['Education',p.education],['Occupation',p.occupation],['Marital status',p.maritalStatus]];
-        const contactAction=myData?.gender==='Man'&&!premiumActive?`show('payment')`:`viewContact('${safe(p.uid)}')`;
+        const contactAction=myData?.gender==='Man'&&!premiumActive?'activatePremiumFromProfile()':`viewContact('${safe(p.uid)}')`;
         $('profileDetails').innerHTML=`${photo}<h2>${safe(p.name)}${p.age?`, ${safe(p.age)}`:''}</h2><div class="detail-grid">${fields.filter(([,value])=>value!==undefined&&value!==null&&String(value).trim()!=='').map(([label,value])=>`<p><strong>${safe(label)}:</strong> ${safe(value)}</p>`).join('')}</div><h3>About</h3><p>${safe(p.about||'')}</p><button class="secondary" onclick="${contactAction}">${myData?.gender==='Man'&&!premiumActive?'Activate Premium to view contact':'View contact (after mutual acceptance)'}</button>`;
         $('profileModal').classList.remove('hidden');
       }catch(e){console.error(e);alert('Could not load this profile.')}
     };
-    window.closeProfile=()=> $('profileModal').classList.add('hidden');window.openPhoto=url=>{if(!url)return;$('fullPhoto').src=url;$('photoModal').classList.remove('hidden')};window.closePhoto=()=>{$('photoModal').classList.add('hidden');$('fullPhoto').removeAttribute('src')};
+    window.closeProfile=()=> $('profileModal').classList.add('hidden');window.activatePremiumFromProfile=()=>{closeProfile();show('payment')};window.openPhoto=url=>{if(!url)return;$('fullPhoto').src=url;$('photoModal').classList.remove('hidden')};window.closePhoto=()=>{$('photoModal').classList.add('hidden');$('fullPhoto').removeAttribute('src')};
     const razorpayButtons={6:'pl_Tl1bQ0vxtQGw3z',12:'pl_Tl1czSxfTMCboQ'};
     window.beginPremiumPayment=async months=>{
       if(!currentUser||!razorpayButtons[months])return;const status=$('paymentStatus');status.textContent='Opening secure payment options…';

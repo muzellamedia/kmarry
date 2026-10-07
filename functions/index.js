@@ -76,9 +76,10 @@ exports.loginWithPhoneAndDob = onCall({ maxInstances: 10 }, async request => {
 
 exports.registerWithPhoneAndDob = onCall({ maxInstances: 10 }, async request => {
   const phone = normalizePhone(request.data?.phone);
+  const contactPhone = normalizePhone(request.data?.contactPhone);
   const dob = String(request.data?.dateOfBirth || '');
-  if (!phone || !isAdultDateOfBirth(dob)) {
-    throw new HttpsError('invalid-argument', 'Enter a valid phone number and date of birth. Users must be at least 18.');
+  if (!phone || !contactPhone || !isAdultDateOfBirth(dob)) {
+    throw new HttpsError('invalid-argument', 'Enter valid sign-in and contact phone numbers and date of birth. Users must be at least 18.');
   }
 
   const ip = request.rawRequest.ip || 'unknown';
@@ -95,7 +96,7 @@ exports.registerWithPhoneAndDob = onCall({ maxInstances: 10 }, async request => 
     const existingAccount = await tx.get(phoneAccountRef);
     if (existingAccount.exists) throw new HttpsError('already-exists', 'This phone number is already registered.');
     tx.create(phoneAccountRef, { uid, createdAt: Timestamp.now() });
-    tx.set(privateProfileRef, { phone, dateOfBirth: dob, email: '', updatedAt: Timestamp.now() });
+    tx.set(privateProfileRef, { phone, contactPhone, dateOfBirth: dob, email: '', updatedAt: Timestamp.now() });
   });
 
   try {
@@ -194,7 +195,7 @@ exports.adminListMembers = onCall({ maxInstances: 5 }, async request => {
     if (!profileSnap.exists && filter === 'payment') return null;
     const profile = profileSnap.data() || {}, privateProfile = privateSnap.data() || {}, premiumRequest = requestSnap.data() || {}, subscription = subscriptionSnap.data() || {};
     return {
-      uid, name: profile.name || '', phone: privateProfile.phone || '', gender: profile.gender || '',
+      uid, name: profile.name || '', phone: privateProfile.contactPhone || privateProfile.phone || '', gender: profile.gender || '',
       age: Number(profile.age) || null, state: profile.state || '', district: profile.district || '',
       requestStatus: premiumRequest.status || '', planMonths: Number(premiumRequest.planMonths) || null,
       amountInr: Number(premiumRequest.amountInr) || null,

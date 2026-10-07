@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function acceptedMatch(otherUid) {
+      let sent = /databases/$(database)/documents/interests/$(request.auth.uid + '_' + otherUid);
+      let received = /databases/$(database)/documents/interests/$(otherUid + '_' + request.auth.uid);
+      return (exists(sent) && get(sent).data.status == 'accepted')
+        || (exists(received) && get(received).data.status == 'accepted');
+    }
+
+    match /profiles/{uid} {
+      allow read: if signedIn();
+      allow create, update, delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /privateProfiles/{uid} {
+      allow get: if signedIn()
+        && (request.auth.uid == uid || acceptedMatch(uid));
+      allow list: if false;
+      allow create, update: if signedIn() && request.auth.uid == uid;
+      allow delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /interests/{interestId} {
+      allow get, list: if signedIn()
+        && (resource.data.senderUid == request.auth.uid
+          || resource.data.recipientUid == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.senderUid == request.auth.uid
+        && request.resource.data.recipientUid is string
+        && request.resource.data.recipientUid != request.auth.uid
+        && request.resource.data.status == 'pending'
+        && exists(/databases/$(database)/documents/profiles/$(request.resource.data.recipientUid));
+      allow update: if signedIn()
+        && resource.data.recipientUid == request.auth.uid
+        && resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'respondedAt'])
+        && request.resource.data.senderUid == resource.data.senderUid
+        && request.resource.data.recipientUid == resource.data.recipientUid
+        && request.resource.data.status in ['accepted', 'rejected'];
+      allow delete: if false;
+    }
+  }
+}

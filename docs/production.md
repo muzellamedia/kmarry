@@ -2,9 +2,10 @@
 
 ## Admin account
 
-- In Firebase Console, enable **Authentication → Sign-in method → Email/Password**.
-- Create the administrator account `muzellamedia@gmail.com`, verify that email, and use a fresh password managed in Firebase Auth. Admin credentials are never stored in site code. The server only grants admin callables to that verified email.
-- The password previously shared in chat must be rotated before production use.
+- Admin sign-in is separate from Firebase Authentication. The administrator enters `muzellamedia@gmail.com` and a password; the `adminLogin` Cloud Function checks them against the `ADMIN_PASSWORD` Secret Manager value and returns a signed session that expires after one hour. Admin member listing and premium activation verify that signed session server-side on every call.
+- Set a new, strong password (do not reuse the password previously shared in chat) from the repository root with `firebase functions:secrets:set ADMIN_PASSWORD`. Enter the password only at the CLI prompt; never put it in source code, a command argument, GitHub, or a screenshot. The secret is required by `adminLogin`, `adminListMembers`, and `adminActivatePremium`.
+- After setting the secret, deploy the functions with `firebase deploy --only functions`. Firebase Authentication remains in use for member phone/date-of-birth accounts, but the admin path does not use Firebase Authentication.
+- Admin login attempts are limited by IP using hashed identifiers in Firestore. A browser session token is held in session storage and expires after one hour; signing out clears it.
 
 ## Premium payments
 

@@ -1,21 +1,108 @@
 {
-  "source": "Kerala Public Service Commission community lists; see https://www.keralapsc.gov.in/list-scheduled-castes-kerala-state",
-  "note": "Community options are for profile self-description only; they do not determine certificate or reservation eligibility.",
+  "source": "KMARRY community choices curated from owner-provided list",
+  "note": "Community options are for profile self-description only. They do not determine certificate or reservation eligibility. Caste No Bar, Inter-Caste / No Caste, Other / not listed, and Prefer not to say are available.",
   "byReligion": {
     "Hindu": [
-      "Adi Andhra", "Adi Dravida", "Adi Karnataka", "Ajila", "Arunthathiyar", "Ayyanavar", "Baira", "Bakuda", "Bathada", "Bharathar (other than Parathar), Paravan", "Chakkiliyan", "Chamar, Muchi", "Chandala", "Cheruman", "Domban", "Gosangi", "Hasla", "Holeya", "Kadaiyan", "Kakkalan, Kakkan", "Kalladi", "Kanakkan, Padanna, Padannan", "Kavara", "Koosa", "Kootan, Koodan", "Kudumban", "Kuruvan, Sidhanar, Kuravar, Kuruva, Sidhana", "Maila", "Malayan", "Mannan, Pathiyan, Perumannan, Vannan, Velan", "Moger", "Mundala", "Nalakeyava", "Nalkadaya", "Nayadi", "Pallan", "Pulluvan", "Pambada", "Panan", "Paraiyan, Parayan, Sambavar, Sambavan, Sambava, Paraya, Paraiya, Parayar", "Pulayan, Cheramar, Pulaya, Pulayar, Cherama, Cheraman, Wayanad Pulayan, Wayanadan Pulayan, Matha Pulayan", "Puthirai Vannan", "Reneyar", "Samagara", "Samban", "Semman, Chemman, Chemmar", "Thandan", "Thotti", "Vallon", "Valluvan", "Vedan", "Vettuvan, Pulaya Vettuvan", "Nerian",
-      "Adiyan", "Aranda (Arandan)", "Eravallan", "Hill Pulaya (Mala Pulayan, Kurumba Pulayan, Karavazhi Pulayan, Pamba Pulayan)", "Irular, Irulan", "Kadar (Wayanad Kadar)", "Kanikkaran, Kanikar", "Karimpalan", "Kattunayakan", "Kochuvelan", "Koraga", "Kudiya, Melakudi", "Kurichchan (Kurichiyan)", "Kurumans (Mullu Kuruman, Mulla Kuruman, Mala Kuruman)", "Kurumbas (Kurumbar, Kurumban)", "Mahamalasar", "Malai Arayan (Mala Arayan)", "Malai Pandaran", "Malai Vedan (Mala Vedan)", "Malakkuravan", "Malasar", "Malayan, Nattu Malayan, Konga Malayan", "Mavilan", "Malayarayar", "Mannan", "Muthuvan, Mudugar, Muduvan", "Palleyan, Palliyan, Paliyar, Palliya", "Paniyan", "Ulladan, Ullatan", "Uraly", "Mala Vettuvan", "Ten Kurumban, Jenu Kurumban", "Thachenadan, Thachenadan Moopan", "Cholanaickan", "Malapanickar", "Vettakuruman",
-      "Agasa", "Ambalakkaran", "Aremahrati", "Arya", "Bandari", "Billava", "Chakkala", "Chavalakkaran (including Chavalar, Chavalam, Chavala and Servai)", "Chetties", "Devadiga", "Devanga", "Dheevara (Arayan, Valan, Nulayan, Mukkuvan, Arayavathi, Valinjiar, Paniakkal, Mukaya, Bovi, Mukayar and Mukaveeran)", "Ezhava and Thiyya", "Ezhavathi", "Ezhuthachan", "Ganika/Ganiga", "Gatti", "Gowda", "Hegde", "Jogi", "Kadupattan", "Kaikolan", "Kolasari, Kalasi Panicker", "Kalari Kurup or Kalari Panicker", "Viswakarma (Asari, Chaptegra, Kallassary, Kalthachan, Kammala, Kamsala, Kannan, Karuvan, Kitaran, Kollan, Malayala Kammala, Moosari, Pandikammala, Pandithattan, Perumkollan, Thachan, Thattan, Vilkurup, Villasan, Viswabrahmanan and Viswakarmala)", "Kannadiyans", "Kanisu or Kaniyar Panicker, Kani or Kaniyan (Ganaka), Kanisan or Kamnan", "Kavuthiyan", "Kavudiyaru", "Koteyar", "Krishnanvaka", "Kerala Mudali", "Kudumbi", "Kusavan (Kulala, Kulala Nair, Andhra Nair or Anthuru Nair)", "Kumbarans", "Kuruba", "Madivalas", "Mahendra-Medara", "Maravans", "Maruthuvar", "Nadar (Hindu)", "Naikkans", "Odans", "Pandithars", "Panniyar", "Pattariyas", "Peruvannan (Varanavar)", "Rajapur", "Chakravar, Sakravar (Kavathi)", "Sourashtras", "Saliya, Chaliya (Chaliyan)", "Senai Thalavan (Elavaniar)", "Thachar", "Tholkollans", "Thottian", "Vaduvans, Vadugans, Vadukkars and Vaduka", "Velaans", "Vanian", "Vaniar", "Vakkaliga", "Veerasaivas", "Veluthedathu Nair", "Vilakkithala Nair", "Yadavas", "Kongu Navithan, Vettuva Navithan and Aduthon", "Moopar or Kallan Mooppan", "Kallar",
-      "Other / not listed", "Prefer not to say"
+      "Nair",
+      "Nair — Menon",
+      "Nair — Pillai",
+      "Nair — Kurup",
+      "Nair — Nambiar",
+      "Nair — Panicker",
+      "Nair — Kartha",
+      "Nair — Kaimal",
+      "Nair — Thampi",
+      "Ezhava / Thiyya",
+      "Vishwakarma",
+      "Vishwakarma — Asari",
+      "Vishwakarma — Moosari",
+      "Vishwakarma — Thattan",
+      "Vishwakarma — Kallashari",
+      "Vishwakarma — Kollan",
+      "Brahmin",
+      "Brahmin — Namboothiri",
+      "Brahmin — Potti",
+      "Brahmin — Sharma",
+      "Brahmin — Iyer (Tamil Brahmin)",
+      "Brahmin — Madhva",
+      "Brahmin — Gaud Saraswat Brahmin (GSB)",
+      "Ambalavasi",
+      "Ambalavasi — Warrier",
+      "Ambalavasi — Pisharody",
+      "Ambalavasi — Poduval",
+      "Ambalavasi — Nambiaramma / Chakyar",
+      "Ambalavasi — Marar",
+      "Ambalavasi — Unni",
+      "Dheevara",
+      "Dheevara — Arayan",
+      "Dheevara — Valan",
+      "Dheevara — Mukkuvan",
+      "Dheevara — Marakkan",
+      "Kaniyan / Kanishan",
+      "Chaliya / Devanga",
+      "Kudumbi",
+      "Veluthedathu Nair / Vannan",
+      "Ezhuthachan / Kaduppattan",
+      "Pulaya / Cheramar",
+      "Parayan / Sambavar",
+      "Kanakkan",
+      "Velan",
+      "Ulladan",
+      "Kurichiyan",
+      "Reddy",
+      "Naidu",
+      "Chettiar",
+      "Gounder",
+      "Thevar",
+      "Baniya",
+      "Caste No Bar",
+      "Inter-Caste / No Caste",
+      "Other / not listed",
+      "Prefer not to say"
     ],
-    "Muslim": ["Muslim or Mappila", "Other Muslim community", "Other / not listed", "Prefer not to say"],
-    "Christian": ["Anglo Indian", "Latin Catholic", "Scheduled Castes Converted to Christianity", "S.I.U.C.", "Other Christian community", "Other / not listed", "Prefer not to say"],
-    "Other": ["Other / not listed", "Prefer not to say"],
-    "Sikh": ["Other / not listed", "Prefer not to say"],
-    "Jain": ["Other / not listed", "Prefer not to say"],
-    "Buddhist": ["Other / not listed", "Prefer not to say"],
-    "Jewish": ["Other / not listed", "Prefer not to say"],
-    "Parsi": ["Other / not listed", "Prefer not to say"],
-    "Prefer not to say": ["Prefer not to say"]
+    "Muslim": [
+      "Sunni",
+      "Mujahid",
+      "Shia",
+      "Other Muslim community",
+      "Other / not listed",
+      "Prefer not to say"
+    ],
+    "Christian": [
+      "Anglo Indian",
+      "Latin Catholic",
+      "Scheduled Castes Converted to Christianity",
+      "S.I.U.C.",
+      "Other Christian community",
+      "Other / not listed",
+      "Prefer not to say"
+    ],
+    "Other": [
+      "Other / not listed",
+      "Prefer not to say"
+    ],
+    "Sikh": [
+      "Other / not listed",
+      "Prefer not to say"
+    ],
+    "Jain": [
+      "Other / not listed",
+      "Prefer not to say"
+    ],
+    "Buddhist": [
+      "Other / not listed",
+      "Prefer not to say"
+    ],
+    "Jewish": [
+      "Other / not listed",
+      "Prefer not to say"
+    ],
+    "Parsi": [
+      "Other / not listed",
+      "Prefer not to say"
+    ],
+    "Prefer not to say": [
+      "Prefer not to say"
+    ]
   }
 }

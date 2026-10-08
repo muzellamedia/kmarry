@@ -19,6 +19,7 @@ service cloud.firestore {
       let viewer = /databases/$(database)/documents/profiles/$(request.auth.uid);
       let target = /databases/$(database)/documents/profiles/$(uid);
       return signedIn() && exists(viewer) && exists(target)
+        && get(target).data.get('blocked', false) != true
         && get(target).data.religion == get(viewer).data.religion
         && (get(viewer).data.get('disability', 'Normal person') == 'Normal person'
           || get(target).data.get('disability', 'Normal person') != 'Normal person');
@@ -48,8 +49,9 @@ service cloud.firestore {
         && (request.auth.uid == uid
           || (eligibleMatch(uid) && (activePremium() || viewerHasFreeContactAccess())));
       allow list: if false;
-      allow create, update: if signedIn() && request.auth.uid == uid;
-      allow delete: if signedIn() && request.auth.uid == uid;
+      // Registration, admin edits, and account deletion go through trusted callable Functions.
+      // Members can read their own private data but cannot change sign-in phone or date of birth.
+      allow create, update, delete: if false;
     }
 
     match /premiumSubscriptions/{uid} {

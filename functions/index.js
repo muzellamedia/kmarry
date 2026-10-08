@@ -24,11 +24,16 @@ function requiresPremium(profile) {
   return profile?.gender === 'Man' && !isDisabledProfile(profile);
 }
 
+async function requireActiveMember(uid) {
+  const snapshot = await db.collection('profiles').doc(uid).get();
+  if (!snapshot.exists) throw new HttpsError('failed-precondition', 'Complete your profile first.');
+  if (snapshot.data().blocked === true) throw new HttpsError('permission-denied', 'This account is blocked.');
+  return snapshot.data();
+}
+
 exports.listMatches = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to view matches.');
-  const viewerSnap = await db.collection('profiles').doc(request.auth.uid).get();
-  if (!viewerSnap.exists) throw new HttpsError('failed-precondition', 'Complete your profile first.');
-  const viewer = viewerSnap.data();
+  const viewer = await requireActiveMember(request.auth.uid);
   if (!viewer.religion) throw new HttpsError('failed-precondition', 'Select a religion in your profile to find matches.');
   const matches = await db.collection('profiles').where('religion', '==', viewer.religion).get();
   const profiles = matches.docs.filter(doc => doc.id !== request.auth.uid).map(doc => doc.data())
@@ -91,6 +96,9 @@ exports.loginWithPhoneAndDob = onCall({ maxInstances: 10 }, async request => {
   if (privateProfile.data().dateOfBirth !== dob) {
     throw new HttpsError('unauthenticated', 'Phone or date of birth did not match.');
   }
+
+  const profile = await db.collection('profiles').doc(privateProfile.id).get();
+  if (profile.data()?.blocked === true) throw new HttpsError('permission-denied', 'This account is blocked. Contact the administrator.');
 
   const customToken = await getAuth().createCustomToken(privateProfile.id);
   return { customToken };
@@ -167,6 +175,43 @@ function requireAdmin(request) {
   return data.email;
 }
 
+function serializeAdminRecord(data = {}) {
+  return Object.fromEntries(Object.entries(data).map(([key, value]) => [key, value?.toMillis ? value.toMillis() : value]));
+}
+
+async function deleteMemberData(uid) {
+  const privateRef = db.collection('privateProfiles').doc(uid);
+  const privateSnap = await privateRef.get();
+  const phone = privateSnap.data()?.phone;
+  const phoneAccountRef = phone ? db.collection('phoneAccounts').doc(createHash('sha256').update(phone).digest('hex')) : null;
+  await db.runTransaction(async tx => {
+    if (phoneAccountRef) {
+      const account = await tx.get(phoneAccountRef);
+      if (account.exists && account.data().uid === uid) tx.delete(phoneAccountRef);
+    }
+    tx.delete(db.collection('profiles').doc(uid));
+    tx.delete(privateRef);
+    tx.delete(db.collection('premiumRequests').doc(uid));
+    tx.delete(db.collection('premiumSubscriptions').doc(uid));
+  });
+  for (const field of ['senderUid', 'recipientUid']) {
+    let page;
+    do {
+      page = await db.collection('interests').where(field, '==', uid).limit(400).get();
+      if (!page.empty) {
+        const batch = db.batch();
+        page.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+      }
+    } while (page.size === 400);
+  }
+  await getStorage().bucket().deleteFiles({ prefix: `profilePhotos/${uid}/` }).catch(error => {
+    if (error.code !== 404 && error.code !== '404') throw error;
+  });
+  try { await getAuth().deleteUser(uid); }
+  catch (error) { if (error.code !== 'auth/user-not-found') throw error; }
+}
+
 async function checkAdminLoginRateLimit(ip, failed) {
   const ref = db.collection('authRateLimits').doc(createHash('sha256').update(`admin:${ip}`).digest('hex'));
   const now = Date.now(), windowMs = 15 * 60 * 1000;
@@ -204,10 +249,10 @@ function addMonthsUtc(start, months) {
 
 exports.recordPremiumRequest = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to continue.');
+  const member = await requireActiveMember(request.auth.uid);
   const months = Number(request.data?.months);
   if (![6, 12].includes(months)) throw new HttpsError('invalid-argument', 'Choose a 6 or 12 month plan.');
-  const profileSnap = await db.collection('profiles').doc(request.auth.uid).get();
-  if (!profileSnap.exists || !requiresPremium(profileSnap.data())) {
+  if (!requiresPremium(member)) {
     throw new HttpsError('failed-precondition', 'Premium is available only to men without a disability.');
   }
   const now = Timestamp.now();
@@ -237,56 +282,18 @@ exports.recordPremiumRequest = onCall({ maxInstances: 10 }, async request => {
 
 exports.getPremiumStatus = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to continue.');
-  const [profileSnap, snap] = await Promise.all([
-    db.collection('profiles').doc(request.auth.uid).get(),
+  const [profile, snap] = await Promise.all([
+    requireActiveMember(request.auth.uid),
     db.collection('premiumSubscriptions').doc(request.auth.uid).get()
   ]);
-  const freeAccess = profileSnap.exists && !requiresPremium(profileSnap.data());
+  const freeAccess = !requiresPremium(profile);
   const activeUntil = snap.data()?.activeUntil;
   return { active: Boolean(activeUntil && activeUntil.toMillis() > Date.now()), freeAccess, activeUntilMillis: activeUntil?.toMillis?.() || null };
 });
 
 exports.deleteMyAccount = onCall({ maxInstances: 5 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in before deleting your account.');
-  const uid = request.auth.uid;
-  const privateRef = db.collection('privateProfiles').doc(uid);
-  const privateSnap = await privateRef.get();
-  const phone = privateSnap.data()?.phone;
-  const phoneAccountRef = phone ? db.collection('phoneAccounts').doc(createHash('sha256').update(phone).digest('hex')) : null;
-  if (phoneAccountRef) {
-    await db.runTransaction(async tx => {
-      const account = await tx.get(phoneAccountRef);
-      if (account.exists && account.data().uid === uid) tx.delete(phoneAccountRef);
-      tx.delete(db.collection('profiles').doc(uid));
-      tx.delete(privateRef);
-      tx.delete(db.collection('premiumRequests').doc(uid));
-      tx.delete(db.collection('premiumSubscriptions').doc(uid));
-    });
-  } else {
-    await db.runTransaction(async tx => {
-      tx.delete(db.collection('profiles').doc(uid));
-      tx.delete(privateRef);
-      tx.delete(db.collection('premiumRequests').doc(uid));
-      tx.delete(db.collection('premiumSubscriptions').doc(uid));
-    });
-  }
-
-  for (const field of ['senderUid', 'recipientUid']) {
-    let page;
-    do {
-      page = await db.collection('interests').where(field, '==', uid).limit(400).get();
-      if (!page.empty) {
-        const batch = db.batch();
-        page.docs.forEach(doc => batch.delete(doc.ref));
-        await batch.commit();
-      }
-    } while (page.size === 400);
-  }
-  await getStorage().bucket().deleteFiles({ prefix: `profilePhotos/${uid}/` }).catch(error => {
-    if (error.code !== 404) throw error;
-  });
-  try { await getAuth().deleteUser(uid); }
-  catch (error) { if (error.code !== 'auth/user-not-found') throw error; }
+  await deleteMemberData(request.auth.uid);
   return { deleted: true };
 });
 
@@ -315,10 +322,111 @@ exports.adminListMembers = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 5 }
       amountInr: Number(premiumRequest.amountInr) || null,
       requestedAtMillis: premiumRequest.requestedAt?.toMillis?.() || null,
       activeUntilMillis: subscription.activeUntil?.toMillis?.() || null,
-      premiumActive: Boolean(subscription.activeUntil && subscription.activeUntil.toMillis() > Date.now())
+      premiumActive: Boolean(subscription.activeUntil && subscription.activeUntil.toMillis() > Date.now()),
+      blocked: profile.blocked === true,
+      profile: serializeAdminRecord(profile),
+      privateProfile: serializeAdminRecord(privateProfile)
     };
   }));
   return { members: rows.filter(Boolean), nextCursor: page.size === 50 ? page.docs[page.docs.length - 1].id : null };
+});
+
+exports.adminUpdateMember = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 5 }, async request => {
+  requireAdmin(request);
+  const uid = String(request.data?.uid || ''), profileInput = request.data?.profile || {}, privateInput = request.data?.privateProfile || {};
+  if (!uid || uid.length > 128 || uid.includes('/') || !profileInput || typeof profileInput !== 'object' || !privateInput || typeof privateInput !== 'object') {
+    throw new HttpsError('invalid-argument', 'Choose a member and provide valid profile details.');
+  }
+  const profileFields = ['name', 'gender', 'height', 'religion', 'community', 'disability', 'state', 'district', 'place', 'education', 'occupation', 'maritalStatus', 'about', 'photoUrl'];
+  const profileUpdate = {};
+  for (const [key, value] of Object.entries(profileInput)) {
+    if (!profileFields.includes(key) && key !== 'age') throw new HttpsError('invalid-argument', `Field ${key} cannot be edited.`);
+    if (key === 'age') {
+      const age = Number(value);
+      if (!Number.isInteger(age) || age < 18 || age > 100) throw new HttpsError('invalid-argument', 'Age must be from 18 to 100.');
+      profileUpdate.age = age;
+    } else {
+      if (typeof value !== 'string' || value.length > (key === 'about' ? 1000 : key === 'photoUrl' ? 2000 : 120)) throw new HttpsError('invalid-argument', `${key} has an invalid value.`);
+      profileUpdate[key] = value.trim();
+    }
+  }
+  for (const key of ['name', 'gender', 'religion', 'disability', 'state', 'district', 'place', 'education', 'maritalStatus', 'about']) {
+    if (key in profileUpdate && !profileUpdate[key]) throw new HttpsError('invalid-argument', `${key} is required.`);
+  }
+  const privateUpdate = {};
+  if ('phone' in privateInput) {
+    const phone = normalizePhone(privateInput.phone);
+    if (!phone) throw new HttpsError('invalid-argument', 'Enter a valid registered sign-in phone number.');
+    privateUpdate.phone = phone;
+  }
+  if ('contactPhone' in privateInput) {
+    const contactPhone = normalizePhone(privateInput.contactPhone);
+    if (!contactPhone) throw new HttpsError('invalid-argument', 'Enter a valid contact phone number.');
+    privateUpdate.contactPhone = contactPhone;
+  }
+  if ('dateOfBirth' in privateInput) {
+    const dateOfBirth = String(privateInput.dateOfBirth || '');
+    if (!isAdultDateOfBirth(dateOfBirth)) throw new HttpsError('invalid-argument', 'Date of birth must confirm the member is at least 18.');
+    privateUpdate.dateOfBirth = dateOfBirth;
+    const birthDate = new Date(`${dateOfBirth}T00:00:00.000Z`), now = new Date();
+    let age = now.getUTCFullYear() - birthDate.getUTCFullYear();
+    if (now.getUTCMonth() < birthDate.getUTCMonth() || (now.getUTCMonth() === birthDate.getUTCMonth() && now.getUTCDate() < birthDate.getUTCDate())) age--;
+    profileUpdate.age = age;
+  }
+  if (profileUpdate.gender && !['Woman', 'Man', 'Non-binary'].includes(profileUpdate.gender)) throw new HttpsError('invalid-argument', 'Choose a valid gender.');
+  if (profileUpdate.disability && profileUpdate.disability.length > 120) throw new HttpsError('invalid-argument', 'Choose a valid disability option.');
+  if (profileUpdate.place || profileUpdate.district || profileUpdate.state) {
+    const existing = await db.collection('profiles').doc(uid).get();
+    if (!existing.exists) throw new HttpsError('not-found', 'Member profile was not found.');
+    const data = existing.data();
+    profileUpdate.location = [profileUpdate.place ?? data.place, profileUpdate.district ?? data.district, profileUpdate.state ?? data.state].filter(Boolean).join(', ');
+  }
+  profileUpdate.updatedAt = Timestamp.now();
+  privateUpdate.updatedAt = Timestamp.now();
+  await db.runTransaction(async tx => {
+    const profileRef = db.collection('profiles').doc(uid), privateRef = db.collection('privateProfiles').doc(uid);
+    const [profileSnap, privateSnap] = await Promise.all([tx.get(profileRef), tx.get(privateRef)]);
+    if (!profileSnap.exists || !privateSnap.exists) throw new HttpsError('not-found', 'Member account was not found.');
+    if (privateUpdate.phone && privateUpdate.phone !== privateSnap.data().phone) {
+      const oldPhone = privateSnap.data().phone || '';
+      const oldAccountRef = oldPhone ? db.collection('phoneAccounts').doc(createHash('sha256').update(oldPhone).digest('hex')) : null;
+      const newAccountRef = db.collection('phoneAccounts').doc(createHash('sha256').update(privateUpdate.phone).digest('hex'));
+      const [oldAccountSnap, newAccountSnap] = await Promise.all([
+        oldAccountRef ? tx.get(oldAccountRef) : Promise.resolve(null), tx.get(newAccountRef)
+      ]);
+      if (newAccountSnap.exists && newAccountSnap.data().uid !== uid) throw new HttpsError('already-exists', 'That registered phone number belongs to another account.');
+      if (oldAccountRef && oldAccountSnap?.exists && oldAccountSnap.data().uid === uid && oldAccountRef.path !== newAccountRef.path) tx.delete(oldAccountRef);
+      if (!newAccountSnap.exists) tx.create(newAccountRef, { uid, createdAt: Timestamp.now() });
+    }
+    tx.update(profileRef, profileUpdate);
+    tx.update(privateRef, privateUpdate);
+  });
+  return { updated: true };
+});
+
+exports.adminSetMemberBlocked = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 5 }, async request => {
+  requireAdmin(request);
+  const uid = String(request.data?.uid || ''), blocked = request.data?.blocked;
+  if (!uid || uid.length > 128 || uid.includes('/') || typeof blocked !== 'boolean') throw new HttpsError('invalid-argument', 'Choose a member and block status.');
+  const profileRef = db.collection('profiles').doc(uid);
+  const profileSnap = await profileRef.get();
+  if (!profileSnap.exists) throw new HttpsError('not-found', 'Member profile was not found.');
+  if (blocked) {
+    await profileRef.update({ blocked: true, updatedAt: Timestamp.now() });
+    await getAuth().updateUser(uid, { disabled: true });
+  } else {
+    await getAuth().updateUser(uid, { disabled: false });
+    await profileRef.update({ blocked: false, updatedAt: Timestamp.now() });
+  }
+  return { blocked };
+});
+
+exports.adminDeleteMember = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 3 }, async request => {
+  requireAdmin(request);
+  const uid = String(request.data?.uid || '');
+  if (!uid || uid.length > 128 || uid.includes('/')) throw new HttpsError('invalid-argument', 'Choose a valid member.');
+  await deleteMemberData(uid);
+  return { deleted: true };
 });
 
 exports.adminActivatePremium = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 5 }, async request => {

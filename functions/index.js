@@ -354,6 +354,11 @@ exports.adminUpdateMember = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 5 
     if (key in profileUpdate && !profileUpdate[key]) throw new HttpsError('invalid-argument', `${key} is required.`);
   }
   const privateUpdate = {};
+  if ('phone' in privateInput) {
+    const phone = normalizePhone(privateInput.phone);
+    if (!phone) throw new HttpsError('invalid-argument', 'Enter a valid registered sign-in phone number.');
+    privateUpdate.phone = phone;
+  }
   if ('contactPhone' in privateInput) {
     const contactPhone = normalizePhone(privateInput.contactPhone);
     if (!contactPhone) throw new HttpsError('invalid-argument', 'Enter a valid contact phone number.');
@@ -382,6 +387,17 @@ exports.adminUpdateMember = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 5 
     const profileRef = db.collection('profiles').doc(uid), privateRef = db.collection('privateProfiles').doc(uid);
     const [profileSnap, privateSnap] = await Promise.all([tx.get(profileRef), tx.get(privateRef)]);
     if (!profileSnap.exists || !privateSnap.exists) throw new HttpsError('not-found', 'Member account was not found.');
+    if (privateUpdate.phone && privateUpdate.phone !== privateSnap.data().phone) {
+      const oldPhone = privateSnap.data().phone || '';
+      const oldAccountRef = oldPhone ? db.collection('phoneAccounts').doc(createHash('sha256').update(oldPhone).digest('hex')) : null;
+      const newAccountRef = db.collection('phoneAccounts').doc(createHash('sha256').update(privateUpdate.phone).digest('hex'));
+      const [oldAccountSnap, newAccountSnap] = await Promise.all([
+        oldAccountRef ? tx.get(oldAccountRef) : Promise.resolve(null), tx.get(newAccountRef)
+      ]);
+      if (newAccountSnap.exists && newAccountSnap.data().uid !== uid) throw new HttpsError('already-exists', 'That registered phone number belongs to another account.');
+      if (oldAccountRef && oldAccountSnap?.exists && oldAccountSnap.data().uid === uid && oldAccountRef.path !== newAccountRef.path) tx.delete(oldAccountRef);
+      if (!newAccountSnap.exists) tx.create(newAccountRef, { uid, createdAt: Timestamp.now() });
+    }
     tx.update(profileRef, profileUpdate);
     tx.update(privateRef, privateUpdate);
   });

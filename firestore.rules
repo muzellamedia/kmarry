@@ -1,7 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() { return request.auth != null; }
+    function signedIn() {
+      return request.auth != null
+        && (!exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+          || get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('blocked', false) != true);
+    }
     function activePremium() {
       let subscription = /databases/$(database)/documents/premiumSubscriptions/$(request.auth.uid);
       return exists(subscription) && get(subscription).data.activeUntil > request.time;
@@ -30,17 +34,20 @@ service cloud.firestore {
       allow get: if signedIn() && (request.auth.uid == uid || eligibleMatch(uid));
       allow list: if false;
       allow create: if signedIn() && request.auth.uid == uid
-        && request.resource.data.disability is string;
+        && request.resource.data.disability is string
+        && request.resource.data.get('blocked', false) == false;
       allow update: if signedIn() && request.auth.uid == uid
         && request.resource.data.gender == resource.data.gender
-        && request.resource.data.disability is string;
+        && request.resource.data.disability is string
+        && request.resource.data.get('blocked', false) == resource.data.get('blocked', false);
       allow delete: if false;
     }
 
     match /privateProfiles/{uid} {
       allow get: if signedIn()
         && (request.auth.uid == uid
-          || (acceptedMatch(uid) && (viewerHasFreeContactAccess() || activePremium())));
+          || (eligibleMatch(uid) && (activePremium()
+            || (acceptedMatch(uid) && viewerHasFreeContactAccess()))));
       allow list: if false;
       allow create, update: if signedIn() && request.auth.uid == uid;
       allow delete: if signedIn() && request.auth.uid == uid;

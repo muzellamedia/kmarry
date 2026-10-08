@@ -3,6 +3,7 @@ const { defineSecret } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 const { getFirestore, Timestamp, FieldPath } = require('firebase-admin/firestore');
+const { getStorage } = require('firebase-admin/storage');
 const { createHash, randomUUID, createHmac, timingSafeEqual } = require('node:crypto');
 
 initializeApp();
@@ -14,6 +15,26 @@ function normalizePhone(value) {
   if (digits.length < 11 || digits.length > 15) return '';
   return `+${digits}`;
 }
+
+function isDisabledProfile(profile) {
+  return Boolean(profile?.disability && profile.disability !== 'Normal person');
+}
+
+function requiresPremium(profile) {
+  return profile?.gender === 'Man' && !isDisabledProfile(profile);
+}
+
+exports.listMatches = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to view matches.');
+  const viewerSnap = await db.collection('profiles').doc(request.auth.uid).get();
+  if (!viewerSnap.exists) throw new HttpsError('failed-precondition', 'Complete your profile first.');
+  const viewer = viewerSnap.data();
+  if (!viewer.religion) throw new HttpsError('failed-precondition', 'Select a religion in your profile to find matches.');
+  const matches = await db.collection('profiles').where('religion', '==', viewer.religion).get();
+  const profiles = matches.docs.filter(doc => doc.id !== request.auth.uid).map(doc => doc.data())
+    .filter(profile => !isDisabledProfile(viewer) || isDisabledProfile(profile));
+  return { profiles };
+});
 
 function isAdultDateOfBirth(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -186,8 +207,8 @@ exports.recordPremiumRequest = onCall({ maxInstances: 10 }, async request => {
   const months = Number(request.data?.months);
   if (![6, 12].includes(months)) throw new HttpsError('invalid-argument', 'Choose a 6 or 12 month plan.');
   const profileSnap = await db.collection('profiles').doc(request.auth.uid).get();
-  if (!profileSnap.exists || profileSnap.data().gender !== 'Man') {
-    throw new HttpsError('failed-precondition', 'This premium plan is for male profiles.');
+  if (!profileSnap.exists || !requiresPremium(profileSnap.data())) {
+    throw new HttpsError('failed-precondition', 'Premium is available only to men without a disability.');
   }
   const now = Timestamp.now();
   const requestRef = db.collection('premiumRequests').doc(request.auth.uid);
@@ -216,9 +237,57 @@ exports.recordPremiumRequest = onCall({ maxInstances: 10 }, async request => {
 
 exports.getPremiumStatus = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to continue.');
-  const snap = await db.collection('premiumSubscriptions').doc(request.auth.uid).get();
+  const [profileSnap, snap] = await Promise.all([
+    db.collection('profiles').doc(request.auth.uid).get(),
+    db.collection('premiumSubscriptions').doc(request.auth.uid).get()
+  ]);
+  const freeAccess = profileSnap.exists && !requiresPremium(profileSnap.data());
   const activeUntil = snap.data()?.activeUntil;
-  return { active: Boolean(activeUntil && activeUntil.toMillis() > Date.now()), activeUntilMillis: activeUntil?.toMillis?.() || null };
+  return { active: Boolean(activeUntil && activeUntil.toMillis() > Date.now()), freeAccess, activeUntilMillis: activeUntil?.toMillis?.() || null };
+});
+
+exports.deleteMyAccount = onCall({ maxInstances: 5 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in before deleting your account.');
+  const uid = request.auth.uid;
+  const privateRef = db.collection('privateProfiles').doc(uid);
+  const privateSnap = await privateRef.get();
+  const phone = privateSnap.data()?.phone;
+  const phoneAccountRef = phone ? db.collection('phoneAccounts').doc(createHash('sha256').update(phone).digest('hex')) : null;
+  if (phoneAccountRef) {
+    await db.runTransaction(async tx => {
+      const account = await tx.get(phoneAccountRef);
+      if (account.exists && account.data().uid === uid) tx.delete(phoneAccountRef);
+      tx.delete(db.collection('profiles').doc(uid));
+      tx.delete(privateRef);
+      tx.delete(db.collection('premiumRequests').doc(uid));
+      tx.delete(db.collection('premiumSubscriptions').doc(uid));
+    });
+  } else {
+    await db.runTransaction(async tx => {
+      tx.delete(db.collection('profiles').doc(uid));
+      tx.delete(privateRef);
+      tx.delete(db.collection('premiumRequests').doc(uid));
+      tx.delete(db.collection('premiumSubscriptions').doc(uid));
+    });
+  }
+
+  for (const field of ['senderUid', 'recipientUid']) {
+    let page;
+    do {
+      page = await db.collection('interests').where(field, '==', uid).limit(400).get();
+      if (!page.empty) {
+        const batch = db.batch();
+        page.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+      }
+    } while (page.size === 400);
+  }
+  await getStorage().bucket().deleteFiles({ prefix: `profilePhotos/${uid}/` }).catch(error => {
+    if (error.code !== 404) throw error;
+  });
+  try { await getAuth().deleteUser(uid); }
+  catch (error) { if (error.code !== 'auth/user-not-found') throw error; }
+  return { deleted: true };
 });
 
 exports.adminListMembers = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 5 }, async request => {
@@ -265,7 +334,7 @@ exports.adminActivatePremium = onCall({ secrets: [ADMIN_PASSWORD], maxInstances:
   const now = Timestamp.now();
   const activated = await db.runTransaction(async tx => {
     const [profileSnap, subscriptionSnap, premiumRequestSnap] = await Promise.all([tx.get(profileRef), tx.get(subscriptionRef), tx.get(requestRef)]);
-    if (!profileSnap.exists || profileSnap.data().gender !== 'Man') throw new HttpsError('not-found', 'Male member profile was not found.');
+    if (!profileSnap.exists || !requiresPremium(profileSnap.data())) throw new HttpsError('not-found', 'Premium eligible member profile was not found.');
     if (!premiumRequestSnap.exists || premiumRequestSnap.data().status !== 'payment_clicked') throw new HttpsError('failed-precondition', 'This member has not selected a premium payment plan.');
     if (Number(premiumRequestSnap.data().planMonths) !== months) throw new HttpsError('failed-precondition', 'The activation duration must match the selected payment plan.');
     const previous = subscriptionSnap.data()?.activeUntil;

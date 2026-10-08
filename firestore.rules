@@ -6,9 +6,18 @@ service cloud.firestore {
       let subscription = /databases/$(database)/documents/premiumSubscriptions/$(request.auth.uid);
       return exists(subscription) && get(subscription).data.activeUntil > request.time;
     }
-    function viewerIsNotMan() {
+    function viewerHasFreeContactAccess() {
       let profile = /databases/$(database)/documents/profiles/$(request.auth.uid);
-      return exists(profile) && get(profile).data.gender != 'Man';
+      return exists(profile) && (get(profile).data.gender != 'Man'
+        || get(profile).data.get('disability', 'Normal person') != 'Normal person');
+    }
+    function eligibleMatch(uid) {
+      let viewer = /databases/$(database)/documents/profiles/$(request.auth.uid);
+      let target = /databases/$(database)/documents/profiles/$(uid);
+      return signedIn() && exists(viewer) && exists(target)
+        && get(target).data.religion == get(viewer).data.religion
+        && (get(viewer).data.get('disability', 'Normal person') == 'Normal person'
+          || get(target).data.get('disability', 'Normal person') != 'Normal person');
     }
     function acceptedMatch(otherUid) {
       let sent = /databases/$(database)/documents/interests/$(request.auth.uid + '_' + otherUid);
@@ -18,17 +27,20 @@ service cloud.firestore {
     }
 
     match /profiles/{uid} {
-      allow read: if signedIn();
-      allow create: if signedIn() && request.auth.uid == uid;
+      allow get: if signedIn() && (request.auth.uid == uid || eligibleMatch(uid));
+      allow list: if false;
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.disability is string;
       allow update: if signedIn() && request.auth.uid == uid
-        && request.resource.data.gender == resource.data.gender;
+        && request.resource.data.gender == resource.data.gender
+        && request.resource.data.disability is string;
       allow delete: if false;
     }
 
     match /privateProfiles/{uid} {
       allow get: if signedIn()
         && (request.auth.uid == uid
-          || (acceptedMatch(uid) && (viewerIsNotMan() || activePremium())));
+          || (acceptedMatch(uid) && (viewerHasFreeContactAccess() || activePremium())));
       allow list: if false;
       allow create, update: if signedIn() && request.auth.uid == uid;
       allow delete: if signedIn() && request.auth.uid == uid;
@@ -57,7 +69,7 @@ service cloud.firestore {
         && request.resource.data.recipientUid is string
         && request.resource.data.recipientUid != request.auth.uid
         && request.resource.data.status == 'pending'
-        && exists(/databases/$(database)/documents/profiles/$(request.resource.data.recipientUid));
+        && eligibleMatch(request.resource.data.recipientUid);
       allow update: if signedIn()
         && resource.data.recipientUid == request.auth.uid
         && resource.data.status == 'pending'

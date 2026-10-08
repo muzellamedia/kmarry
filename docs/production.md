@@ -10,11 +10,17 @@
 
 ## Premium payments
 
-- Registration stores the sign-in phone and profile contact phone separately in each private profile. The contact phone is returned only after the accepted-interest and gender/premium checks in Firestore rules. Existing accounts continue to use their stored phone as a fallback contact.
+- Registration stores the sign-in phone and profile contact phone separately in each private profile. Firestore rules allow eligible women and members with disabilities to view contacts without accepted interest; men without disabilities need active Premium. Existing accounts continue to use their stored phone as a fallback contact.
 - Confirm both Razorpay Payment Buttons are live, in INR, and configured for exactly ₹599 (6 months) and ₹1,199 (12 months). The site records a member's plan selection before loading the supplied Razorpay button.
 - A recorded selection means the member chose a plan; it does not prove checkout or payment completed. Check Razorpay Dashboard and activate only transactions shown as captured. The admin dashboard's payment-request filter provides the member and selected plan. Admins can also activate a 6 or 12 month entitlement from All members when there is no payment-button request; verify any off-platform payment before doing so.
-- Admin activation writes the entitlement on the server. Firestore rules hide private contact data from men without an active entitlement, even if the page UI is bypassed. Women and non-male profiles retain free contact access after mutual interest acceptance. Only profiles declared as Man require Premium; this does not independently verify gender.
+- Admin activation writes the entitlement on the server. Firestore rules hide private contact data from men without an active entitlement, even if the page UI is bypassed. Women and members with disabilities retain free contact access without accepted interest when profiles meet religion and disability matching rules. Gender and disability are self-declared profile values.
 - The UI promises activation within 24 hours after payment verification. Operations must review the payment-request list within that period.
+
+## Admin dashboard overview
+
+- The overview loads on admin sign-in and can be refreshed. Gender, religion, disability, Premium, and new-user totals come from the server-side profile/account records; the new-user window is the latest 30 days.
+- Visitor counts are unique browser IDs, not page views. Tracking starts when this version is deployed, so older visits cannot be reconstructed. The visitor ID is random and stored in that browser's local storage; its server-side document key is hashed.
+- Income is recorded when an administrator activates a plan after verifying payment. New activations are written to an append-only ledger, including manual activations without a payment-button request. Historical totals can only use the latest recorded activated request or subscription for older accounts; previous repeated renewals were not stored as a ledger and cannot be recovered. When an account is deleted, the retained income event is anonymized so totals remain without the member ID. Monthly totals use India Standard Time.
 
 ## Deploy
 

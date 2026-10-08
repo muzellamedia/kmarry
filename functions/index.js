@@ -380,22 +380,23 @@ exports.adminUpdateMember = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 5 
   if (!uid || uid.length > 128 || uid.includes('/') || !profileInput || typeof profileInput !== 'object' || !privateInput || typeof privateInput !== 'object') {
     throw new HttpsError('invalid-argument', 'Choose a member and provide valid profile details.');
   }
-  const profileFields = ['name', 'gender', 'height', 'religion', 'community', 'disability', 'state', 'district', 'place', 'education', 'occupation', 'maritalStatus', 'about', 'photoUrl'];
+  const profileFields = ['name', 'gender', 'height', 'religion', 'community', 'disability', 'state', 'district', 'place', 'education', 'occupation', 'maritalStatus', 'bodyType', 'bodyColour', 'financialStatus', 'childrenStatus', 'employedIn', 'familyStatus', 'familyType', 'about', 'photoUrl'];
   const profileUpdate = {};
   for (const [key, value] of Object.entries(profileInput)) {
-    if (!profileFields.includes(key) && key !== 'age') throw new HttpsError('invalid-argument', `Field ${key} cannot be edited.`);
-    if (key === 'age') {
+    if (!profileFields.includes(key) && !['age', 'brothers', 'sisters'].includes(key)) throw new HttpsError('invalid-argument', `Field ${key} cannot be edited.`);
+    if (key === 'age' || key === 'brothers' || key === 'sisters') {
       const age = Number(value);
-      if (!Number.isInteger(age) || age < 18 || age > 100) throw new HttpsError('invalid-argument', 'Age must be from 18 to 100.');
-      profileUpdate.age = age;
+      if (!Number.isInteger(age) || (key === 'age' ? age < 18 || age > 100 : age < 0 || age > 20)) throw new HttpsError('invalid-argument', key === 'age' ? 'Age must be from 18 to 100.' : 'Sibling counts must be from 0 to 20.');
+      profileUpdate[key] = age;
     } else {
-      if (typeof value !== 'string' || value.length > (key === 'about' ? 1000 : key === 'photoUrl' ? 2000 : 120)) throw new HttpsError('invalid-argument', `${key} has an invalid value.`);
+      if (typeof value !== 'string' || value.length > (key === 'about' ? 200 : key === 'photoUrl' ? 2000 : key === 'occupation' ? 100 : 120)) throw new HttpsError('invalid-argument', `${key} has an invalid value.`);
       profileUpdate[key] = value.trim();
     }
   }
-  for (const key of ['name', 'gender', 'religion', 'disability', 'state', 'district', 'place', 'education', 'maritalStatus', 'about']) {
+  for (const key of ['name', 'gender', 'religion', 'disability', 'state', 'district', 'place', 'education', 'maritalStatus']) {
     if (key in profileUpdate && !profileUpdate[key]) throw new HttpsError('invalid-argument', `${key} is required.`);
   }
+  if (profileUpdate.about && /\d/.test(profileUpdate.about)) throw new HttpsError('invalid-argument', 'About me cannot contain numbers.');
   const privateUpdate = {};
   if ('phone' in privateInput) {
     const phone = normalizePhone(privateInput.phone);
@@ -416,7 +417,18 @@ exports.adminUpdateMember = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 5 
     if (now.getUTCMonth() < birthDate.getUTCMonth() || (now.getUTCMonth() === birthDate.getUTCMonth() && now.getUTCDate() < birthDate.getUTCDate())) age--;
     profileUpdate.age = age;
   }
-  if (profileUpdate.gender && !['Woman', 'Man', 'Non-binary'].includes(profileUpdate.gender)) throw new HttpsError('invalid-argument', 'Choose a valid gender.');
+  if (profileUpdate.gender && !['Woman', 'Man'].includes(profileUpdate.gender)) throw new HttpsError('invalid-argument', 'Choose a valid gender.');
+  const enumOptions = {
+    maritalStatus: ['Never Married', 'Divorced', 'Widowed', 'Separated', 'Awaiting Divorce', 'Nikah Divorced / Talaq'],
+    bodyType: ['Slim', 'Average', 'Athletic', 'Heavy', 'Prefer not to say'],
+    bodyColour: ['Fair', 'Wheatish', 'Medium', 'Dark', 'Prefer not to say'],
+    financialStatus: ['Lower income', 'Middle income', 'Upper-middle income', 'High income', 'Prefer not to say'],
+    childrenStatus: ['No children', 'Have children', 'Prefer not to say'],
+    employedIn: ['Private', 'Government', 'Business', 'Self Employed', 'Not Working'],
+    familyStatus: ['Lower Middle Class', 'Middle Class', 'Upper Middle Class', 'Affluent', 'Prefer not to say'],
+    familyType: ['Nuclear Family', 'Joint Family', 'Prefer not to say']
+  };
+  for (const [key, options] of Object.entries(enumOptions)) if (profileUpdate[key] && !options.includes(profileUpdate[key])) throw new HttpsError('invalid-argument', `Choose a valid ${key}.`);
   if (profileUpdate.disability && profileUpdate.disability.length > 120) throw new HttpsError('invalid-argument', 'Choose a valid disability option.');
   if (profileUpdate.place || profileUpdate.district || profileUpdate.state) {
     const existing = await db.collection('profiles').doc(uid).get();

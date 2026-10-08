@@ -35,10 +35,17 @@ service cloud.firestore {
       allow list: if false;
       allow create: if signedIn() && request.auth.uid == uid
         && request.resource.data.disability is string
+        && request.resource.data.gender in ['Man', 'Woman']
+        && request.resource.data.get('about', '') is string
+        && request.resource.data.get('about', '').size() <= 200
+        && request.resource.data.get('about', '').matches('^[^0-9]*$')
         && request.resource.data.get('blocked', false) == false;
       allow update: if signedIn() && request.auth.uid == uid
         && request.resource.data.gender == resource.data.gender
         && request.resource.data.disability is string
+        && request.resource.data.get('about', '') is string
+        && request.resource.data.get('about', '').size() <= 200
+        && request.resource.data.get('about', '').matches('^[^0-9]*$')
         && request.resource.data.get('blocked', false) == resource.data.get('blocked', false);
       allow delete: if false;
     }

@@ -12,7 +12,7 @@ service cloud.firestore {
     }
     function viewerHasFreeContactAccess() {
       let profile = /databases/$(database)/documents/profiles/$(request.auth.uid);
-      return exists(profile) && (get(profile).data.gender != 'Man'
+      return exists(profile) && (get(profile).data.gender == 'Woman'
         || get(profile).data.get('disability', 'Normal person') != 'Normal person');
     }
     function eligibleMatch(uid) {
@@ -23,13 +23,6 @@ service cloud.firestore {
         && (get(viewer).data.get('disability', 'Normal person') == 'Normal person'
           || get(target).data.get('disability', 'Normal person') != 'Normal person');
     }
-    function acceptedMatch(otherUid) {
-      let sent = /databases/$(database)/documents/interests/$(request.auth.uid + '_' + otherUid);
-      let received = /databases/$(database)/documents/interests/$(otherUid + '_' + request.auth.uid);
-      return (exists(sent) && get(sent).data.status == 'accepted')
-        || (exists(received) && get(received).data.status == 'accepted');
-    }
-
     match /profiles/{uid} {
       allow get: if signedIn() && (request.auth.uid == uid || eligibleMatch(uid));
       allow list: if false;
@@ -53,8 +46,7 @@ service cloud.firestore {
     match /privateProfiles/{uid} {
       allow get: if signedIn()
         && (request.auth.uid == uid
-          || (eligibleMatch(uid) && (activePremium()
-            || (acceptedMatch(uid) && viewerHasFreeContactAccess()))));
+          || (eligibleMatch(uid) && (activePremium() || viewerHasFreeContactAccess())));
       allow list: if false;
       allow create, update: if signedIn() && request.auth.uid == uid;
       allow delete: if signedIn() && request.auth.uid == uid;

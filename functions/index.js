@@ -1,8 +1,9 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 const { getFirestore, Timestamp, FieldPath } = require('firebase-admin/firestore');
-const { createHash, randomUUID } = require('node:crypto');
+const { createHash, randomUUID, createHmac, timingSafeEqual } = require('node:crypto');
 
 initializeApp();
 const db = getFirestore();
@@ -119,12 +120,56 @@ exports.registerWithPhoneAndDob = onCall({ maxInstances: 10 }, async request => 
 
 const ADMIN_EMAIL = 'muzellamedia@gmail.com';
 const PREMIUM_PLANS = { 6: 599, 12: 1199 };
+const ADMIN_PASSWORD = defineSecret('ADMIN_PASSWORD');
+const ADMIN_SESSION_TTL_MS = 60 * 60 * 1000;
+
+function signAdminPayload(encodedPayload) {
+  return createHmac('sha256', ADMIN_PASSWORD.value()).update(encodedPayload).digest('base64url');
+}
+
+function issueAdminSession() {
+  const payload = Buffer.from(JSON.stringify({ email: ADMIN_EMAIL, exp: Date.now() + ADMIN_SESSION_TTL_MS })).toString('base64url');
+  return `${payload}.${signAdminPayload(payload)}`;
+}
 
 function requireAdmin(request) {
-  if (!request.auth || String(request.auth.token.email || '').toLowerCase() !== ADMIN_EMAIL || request.auth.token.email_verified !== true) {
-    throw new HttpsError('permission-denied', 'Verified administrator access is required.');
-  }
+  const token = String(request.data?.adminSession || '');
+  const [payload, signature, extra] = token.split('.');
+  if (!payload || !signature || extra !== undefined) throw new HttpsError('unauthenticated', 'Administrator session is required.');
+  const expected = Buffer.from(signAdminPayload(payload));
+  const received = Buffer.from(signature);
+  if (expected.length !== received.length || !timingSafeEqual(expected, received)) throw new HttpsError('unauthenticated', 'Administrator session is invalid.');
+  let data;
+  try { data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')); }
+  catch { throw new HttpsError('unauthenticated', 'Administrator session is invalid.'); }
+  if (data.email !== ADMIN_EMAIL || !Number.isFinite(data.exp) || data.exp <= Date.now()) throw new HttpsError('unauthenticated', 'Administrator session has expired. Sign in again.');
+  return data.email;
 }
+
+async function checkAdminLoginRateLimit(ip, failed) {
+  const ref = db.collection('authRateLimits').doc(createHash('sha256').update(`admin:${ip}`).digest('hex'));
+  const now = Date.now(), windowMs = 15 * 60 * 1000;
+  await db.runTransaction(async tx => {
+    const snap = await tx.get(ref), data = snap.exists ? snap.data() : {};
+    const start = data.windowStart?.toMillis?.() || 0;
+    const count = now - start < windowMs ? (data.count || 0) : 0;
+    if (count >= 5) throw new HttpsError('resource-exhausted', 'Too many attempts. Try again in 15 minutes.');
+    if (failed) tx.set(ref, { count: count + 1, windowStart: now - start < windowMs ? data.windowStart : Timestamp.fromMillis(now) });
+    else if (snap.exists) tx.delete(ref);
+  });
+}
+
+exports.adminLogin = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 3 }, async request => {
+  const email = String(request.data?.email || '').trim().toLowerCase();
+  const password = String(request.data?.password || '').slice(0, 1024);
+  const expected = Buffer.from(ADMIN_PASSWORD.value());
+  const supplied = Buffer.from(password);
+  const matches = expected.length === supplied.length && timingSafeEqual(expected, supplied);
+  const ip = request.rawRequest.ip || 'unknown';
+  await checkAdminLoginRateLimit(ip, email !== ADMIN_EMAIL || !matches);
+  if (email !== ADMIN_EMAIL || !matches) throw new HttpsError('unauthenticated', 'Email or password was not accepted.');
+  return { adminSession: issueAdminSession(), expiresInMs: ADMIN_SESSION_TTL_MS };
+});
 
 function addMonthsUtc(start, months) {
   const result = new Date(start.getTime());
@@ -176,8 +221,8 @@ exports.getPremiumStatus = onCall({ maxInstances: 10 }, async request => {
   return { active: Boolean(activeUntil && activeUntil.toMillis() > Date.now()), activeUntilMillis: activeUntil?.toMillis?.() || null };
 });
 
-exports.adminListMembers = onCall({ maxInstances: 5 }, async request => {
-  requireAdmin(request);
+exports.adminListMembers = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 5 }, async request => {
+  const adminEmail = requireAdmin(request);
   const filter = request.data?.filter === 'payment' ? 'payment' : 'all';
   const cursor = typeof request.data?.cursor === 'string' ? request.data.cursor : '';
   const base = filter === 'payment' ? db.collection('premiumRequests') : db.collection('privateProfiles');
@@ -207,8 +252,8 @@ exports.adminListMembers = onCall({ maxInstances: 5 }, async request => {
   return { members: rows.filter(Boolean), nextCursor: page.size === 50 ? page.docs[page.docs.length - 1].id : null };
 });
 
-exports.adminActivatePremium = onCall({ maxInstances: 5 }, async request => {
-  requireAdmin(request);
+exports.adminActivatePremium = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 5 }, async request => {
+  const adminEmail = requireAdmin(request);
   const uid = String(request.data?.uid || '');
   const months = Number(request.data?.months);
   if (!uid || uid.length > 128 || uid.includes('/') || ![6, 12].includes(months)) {
@@ -228,9 +273,9 @@ exports.adminActivatePremium = onCall({ maxInstances: 5 }, async request => {
     const activeUntil = addMonthsUtc(start, months);
     tx.set(subscriptionRef, {
       uid, planMonths: months, amountInr: PREMIUM_PLANS[months], activeUntil,
-      activatedAt: now, activatedBy: request.auth.uid, updatedAt: now
+      activatedAt: now, activatedBy: adminEmail, updatedAt: now
     });
-    if (premiumRequestSnap.exists) tx.update(requestRef, { status: 'activated', activatedAt: now, activatedBy: request.auth.uid, activatedPlanMonths: months, updatedAt: now });
+    if (premiumRequestSnap.exists) tx.update(requestRef, { status: 'activated', activatedAt: now, activatedBy: adminEmail, activatedPlanMonths: months, updatedAt: now });
     return activeUntil.toMillis();
   });
   return { activeUntilMillis: activated };

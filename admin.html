@@ -14,9 +14,10 @@
     .modal{position:fixed;inset:0;background:#1e1018aa;display:grid;place-items:center;padding:18px;z-index:10}.modal .panel{width:min(900px,100%);max-height:92vh;overflow:auto}.detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 18px}.detail-grid p{margin:6px 0;overflow-wrap:anywhere}.member-photo{max-width:180px;max-height:220px;object-fit:cover;border-radius:12px}.edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.edit-grid .wide{grid-column:1/-1}.edit-grid textarea{min-height:90px}.danger{background:#fff0f0;color:#a32635;border:1px solid #f2d3d6}
     @media(max-width:650px){header{height:auto;min-height:68px;padding:12px 16px;gap:10px}main{padding:24px 16px 45px}.section-title{font-size:21px}.detail-grid,.edit-grid{grid-template-columns:1fr}.edit-grid .wide{grid-column:auto}}
   </style>
+  <link rel="stylesheet" href="/design.css?v=20261008-1">
 </head>
-<body>
-  <header><div class="brand">K<span>♥</span>MARRY · Admin</div><a href="/" class="muted">Back to KMARRY</a></header>
+<body class="admin-page">
+  <header><div class="brand">K<span>♥</span>MARRY <small>Admin</small></div><a href="/" class="muted">Back to KMARRY</a></header>
   <main>
     <section id="loginView"><div class="auth-wrap panel"><div class="eyebrow">Administrator</div><h1>Admin sign in</h1><p class="muted">Enter the temporary administrator credentials.</p><form id="adminLoginForm"><div class="field"><label for="adminEmail">Email</label><input id="adminEmail" name="email" type="email" autocomplete="username" required></div><div class="field" style="margin-top:12px"><label for="adminPassword">Password</label><input id="adminPassword" name="password" type="password" autocomplete="current-password" required></div><div class="status" id="loginStatus" role="status"></div><button type="submit">Sign in</button></form></div></section>
     <section id="dashboardView" class="hidden"><div class="row between"><h1 class="section-title">Administrator dashboard</h1><button class="secondary" id="refreshStats" type="button">Refresh overview</button><button class="secondary" id="signOutButton" type="button">Sign out</button></div><div class="overview"><div class="stats-grid">

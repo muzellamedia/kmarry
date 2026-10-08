@@ -126,7 +126,7 @@ exports.registerWithPhoneAndDob = onCall({ maxInstances: 10 }, async request => 
     const existingAccount = await tx.get(phoneAccountRef);
     if (existingAccount.exists) throw new HttpsError('already-exists', 'This phone number is already registered.');
     tx.create(phoneAccountRef, { uid, createdAt: Timestamp.now() });
-    tx.set(privateProfileRef, { phone, contactPhone, dateOfBirth: dob, email: '', updatedAt: Timestamp.now() });
+    tx.set(privateProfileRef, { phone, contactPhone, dateOfBirth: dob, email: '', createdAt: Timestamp.now(), updatedAt: Timestamp.now() });
   });
 
   try {
@@ -301,34 +301,77 @@ exports.adminListMembers = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 5 }
   const adminEmail = requireAdmin(request);
   const filter = request.data?.filter === 'payment' ? 'payment' : 'all';
   const cursor = typeof request.data?.cursor === 'string' ? request.data.cursor : '';
+  const filters = request.data?.filters && typeof request.data.filters === 'object' ? request.data.filters : {};
+  const genderFilter = ['Man', 'Woman'].includes(filters.gender) ? filters.gender : '';
+  const religionFilter = typeof filters.religion === 'string' ? filters.religion.trim().slice(0, 80) : '';
+  const phoneFilter = String(filters.phone || '').replace(/\D/g, '').slice(-15);
+  const premiumOnly = filters.premium === true;
+  const newOnly = filters.newUser === true;
+  const disabilityOnly = filters.disability === true;
   const base = filter === 'payment' ? db.collection('premiumRequests') : db.collection('privateProfiles');
-  let query = base.orderBy(FieldPath.documentId()).limit(50);
-  if (cursor) query = query.startAfter(cursor);
-  const page = await query.get();
-  const rows = await Promise.all(page.docs.map(async item => {
-    const uid = item.id;
-    const [profileSnap, privateSnap, requestSnap, subscriptionSnap] = await Promise.all([
-      db.collection('profiles').doc(uid).get(),
-      filter === 'payment' ? db.collection('privateProfiles').doc(uid).get() : Promise.resolve(item),
-      filter === 'payment' ? Promise.resolve(item) : db.collection('premiumRequests').doc(uid).get(),
-      db.collection('premiumSubscriptions').doc(uid).get()
-    ]);
-    if (!profileSnap.exists && filter === 'payment') return null;
-    const profile = profileSnap.data() || {}, privateProfile = privateSnap.data() || {}, premiumRequest = requestSnap.data() || {}, subscription = subscriptionSnap.data() || {};
-    return {
-      uid, name: profile.name || '', phone: privateProfile.contactPhone || privateProfile.phone || '', gender: profile.gender || '',
-      age: Number(profile.age) || null, state: profile.state || '', district: profile.district || '',
-      requestStatus: premiumRequest.status || '', planMonths: Number(premiumRequest.planMonths) || null,
-      amountInr: Number(premiumRequest.amountInr) || null,
-      requestedAtMillis: premiumRequest.requestedAt?.toMillis?.() || null,
-      activeUntilMillis: subscription.activeUntil?.toMillis?.() || null,
-      premiumActive: Boolean(subscription.activeUntil && subscription.activeUntil.toMillis() > Date.now()),
-      blocked: profile.blocked === true,
-      profile: serializeAdminRecord(profile),
-      privateProfile: serializeAdminRecord(privateProfile)
-    };
-  }));
-  return { members: rows.filter(Boolean), nextCursor: page.size === 50 ? page.docs[page.docs.length - 1].id : null };
+  const now = Date.now(), newSince = now - 30 * 24 * 60 * 60 * 1000;
+  const members = [];
+  let lastScanned = cursor, exhausted = false, scanCount = 0;
+  while (members.length < 50 && !exhausted && scanCount < 1000) {
+    let query = base.orderBy(FieldPath.documentId()).limit(100);
+    if (lastScanned) query = query.startAfter(lastScanned);
+    const page = await query.get();
+    if (page.empty) { exhausted = true; break; }
+    scanCount += page.size;
+    const ids = page.docs.map(item => item.id);
+    const authCreationByUid = new Map();
+    const authUsers = await getAuth().getUsers(ids.map(uid => ({ uid })));
+    for (const user of authUsers.users) {
+      const createdAt = user.metadata?.creationTime ? Date.parse(user.metadata.creationTime) : 0;
+      if (createdAt) authCreationByUid.set(user.uid, createdAt);
+    }
+    const rows = await Promise.all(page.docs.map(async item => {
+      const uid = item.id;
+      const [profileSnap, privateSnap, requestSnap, subscriptionSnap] = await Promise.all([
+        db.collection('profiles').doc(uid).get(),
+        filter === 'payment' ? db.collection('privateProfiles').doc(uid).get() : Promise.resolve(item),
+        filter === 'payment' ? Promise.resolve(item) : db.collection('premiumRequests').doc(uid).get(),
+        db.collection('premiumSubscriptions').doc(uid).get()
+      ]);
+      if (!profileSnap.exists || !privateSnap.exists) return null;
+      const profile = profileSnap.data() || {}, privateProfile = privateSnap.data() || {}, premiumRequest = requestSnap.data() || {}, subscription = subscriptionSnap.data() || {};
+      const premiumActive = Boolean(subscription.activeUntil && subscription.activeUntil.toMillis() > now);
+      const createdAtMillis = privateProfile.createdAt?.toMillis?.() || authCreationByUid.get(uid) || 0;
+      const phoneDigits = [privateProfile.contactPhone, privateProfile.phone].map(value => String(value || '').replace(/\D/g, ''));
+      const hasDisability = Boolean(profile.disability && !/^normal person$/i.test(profile.disability.trim()));
+      if (genderFilter && profile.gender !== genderFilter) return null;
+      if (religionFilter && profile.religion !== religionFilter) return null;
+      if (phoneFilter && !phoneDigits.some(value => value.endsWith(phoneFilter))) return null;
+      if (premiumOnly && !premiumActive) return null;
+      if (newOnly && createdAtMillis < newSince) return null;
+      if (disabilityOnly && !hasDisability) return null;
+      return {
+        uid, name: profile.name || '', phone: privateProfile.contactPhone || privateProfile.phone || '', gender: profile.gender || '',
+        age: Number(profile.age) || null, religion: profile.religion || '', disability: profile.disability || '',
+        state: profile.state || '', district: profile.district || '',
+        requestStatus: premiumRequest.status || '', planMonths: Number(premiumRequest.planMonths) || null,
+        amountInr: Number(premiumRequest.amountInr) || null,
+        requestedAtMillis: premiumRequest.requestedAt?.toMillis?.() || null,
+        createdAtMillis,
+        activeUntilMillis: subscription.activeUntil?.toMillis?.() || null,
+        premiumActive,
+        blocked: profile.blocked === true,
+        profile: serializeAdminRecord(profile),
+        privateProfile: serializeAdminRecord(privateProfile),
+        cursorId: uid
+      };
+    }));
+    for (const row of rows) {
+      lastScanned = row?.cursorId || lastScanned;
+      if (row) members.push(row);
+      if (members.length === 50) break;
+    }
+    if (members.length < 50) lastScanned = page.docs[page.docs.length - 1].id;
+    if (page.size < 100) exhausted = true;
+  }
+  const hasMore = !exhausted;
+  members.forEach(member => delete member.cursorId);
+  return { members, nextCursor: hasMore ? lastScanned : null };
 });
 
 exports.adminUpdateMember = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 5 }, async request => {
@@ -443,8 +486,6 @@ exports.adminActivatePremium = onCall({ secrets: [ADMIN_PASSWORD], maxInstances:
   const activated = await db.runTransaction(async tx => {
     const [profileSnap, subscriptionSnap, premiumRequestSnap] = await Promise.all([tx.get(profileRef), tx.get(subscriptionRef), tx.get(requestRef)]);
     if (!profileSnap.exists || !requiresPremium(profileSnap.data())) throw new HttpsError('not-found', 'Premium eligible member profile was not found.');
-    if (!premiumRequestSnap.exists || premiumRequestSnap.data().status !== 'payment_clicked') throw new HttpsError('failed-precondition', 'This member has not selected a premium payment plan.');
-    if (Number(premiumRequestSnap.data().planMonths) !== months) throw new HttpsError('failed-precondition', 'The activation duration must match the selected payment plan.');
     const previous = subscriptionSnap.data()?.activeUntil;
     const start = previous && previous.toMillis() > now.toMillis() ? previous.toDate() : now.toDate();
     const activeUntil = addMonthsUtc(start, months);

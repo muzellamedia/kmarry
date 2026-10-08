@@ -175,6 +175,14 @@ function requireAdmin(request) {
   return data.email;
 }
 
+function indiaDateKeys(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return { day: `${values.year}${values.month}${values.day}`, month: `${values.year}${values.month}` };
+}
+
 function serializeAdminRecord(data = {}) {
   return Object.fromEntries(Object.entries(data).map(([key, value]) => [key, value?.toMillis ? value.toMillis() : value]));
 }
@@ -194,6 +202,20 @@ async function deleteMemberData(uid) {
     tx.delete(db.collection('premiumRequests').doc(uid));
     tx.delete(db.collection('premiumSubscriptions').doc(uid));
   });
+  let paymentPage;
+  do {
+    paymentPage = await db.collection('premiumPayments').where('uid', '==', uid).limit(200).get();
+    if (!paymentPage.empty) {
+      const batch = db.batch();
+      paymentPage.docs.forEach(payment => {
+        const anonymized = { ...payment.data() };
+        delete anonymized.uid;
+        batch.set(db.collection('premiumPayments').doc(), anonymized);
+        batch.delete(payment.ref);
+      });
+      await batch.commit();
+    }
+  } while (paymentPage.size === 200);
   for (const field of ['senderUid', 'recipientUid']) {
     let page;
     do {
@@ -374,6 +396,107 @@ exports.adminListMembers = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 5 }
   return { members, nextCursor: hasMore ? lastScanned : null };
 });
 
+exports.adminGetDashboardStats = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 3 }, async request => {
+  requireAdmin(request);
+  const now = Timestamp.now(), thirtyDaysAgo = Timestamp.fromMillis(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const todayKey = indiaDateKeys().day, monthKey = indiaDateKeys().month;
+  const gender = { Man: 0, Woman: 0 }, disability = { Man: 0, Woman: 0 }, religions = {};
+  let cursor = null;
+  while (true) {
+    let pageQuery = db.collection('profiles').select('gender', 'religion', 'disability')
+      .orderBy(FieldPath.documentId()).limit(1000);
+    if (cursor) pageQuery = pageQuery.startAfter(cursor);
+    const page = await pageQuery.get();
+    if (page.empty) break;
+    for (const doc of page.docs) {
+      const profile = doc.data(), memberGender = profile.gender === 'Man' ? 'Man' : profile.gender === 'Woman' ? 'Woman' : '';
+      if (!memberGender) continue;
+      gender[memberGender]++;
+      const hasDisability = Boolean(profile.disability && !/^normal person$/i.test(String(profile.disability).trim()));
+      if (hasDisability) disability[memberGender]++;
+      const religion = String(profile.religion || 'Not specified').trim().slice(0, 80) || 'Not specified';
+      religions[religion] ||= { Man: 0, Woman: 0 };
+      religions[religion][memberGender]++;
+    }
+    cursor = page.docs[page.docs.length - 1];
+    if (page.size < 1000) break;
+  }
+
+  const [newMembersResult, subscriptionsSnapshot, totalVisitorsResult, todayVisitorsResult, paymentsSnapshot, legacyRequests] = await Promise.all([
+    db.collection('privateProfiles').where('createdAt', '>=', thirtyDaysAgo).count().get(),
+    db.collection('premiumSubscriptions').get(),
+    db.collection('siteVisitors').count().get(),
+    db.collection('siteVisitorDays').where('day', '==', todayKey).count().get(),
+    db.collection('premiumPayments').get(),
+    db.collection('premiumRequests').where('status', '==', 'activated').get()
+  ]);
+  const premiumMembers = subscriptionsSnapshot.docs.filter(item => item.data().activeUntil?.toMillis?.() > now.toMillis()).length;
+  let totalIncome = 0, monthIncome = 0;
+  const ledgerUsers = new Set();
+  for (const payment of paymentsSnapshot.docs) {
+    const data = payment.data(), amount = Number(data.amountInr) || 0;
+    if (data.uid) ledgerUsers.add(data.uid);
+    totalIncome += amount;
+    if (data.paidAt?.toDate && indiaDateKeys(data.paidAt.toDate()).month === monthKey) monthIncome += amount;
+  }
+  // Older verified requests predate the append-only payment ledger. They are retained
+  // in the per-member request record, so include them only until a ledger entry exists.
+  const legacyRequestUsers = new Set();
+  for (const request of legacyRequests.docs) {
+    const data = request.data();
+    if (data.paymentLedgerId) continue;
+    legacyRequestUsers.add(request.id);
+    const amount = Number(data.amountInr) || 0;
+    totalIncome += amount;
+    if (data.activatedAt?.toDate && indiaDateKeys(data.activatedAt.toDate()).month === monthKey) monthIncome += amount;
+  }
+  // Pre-ledger manual activations had only the latest subscription document.
+  // Include that last recorded plan when no payment request or ledger entry exists.
+  for (const subscription of subscriptionsSnapshot.docs) {
+    if (ledgerUsers.has(subscription.id) || legacyRequestUsers.has(subscription.id)) continue;
+    const data = subscription.data(), amount = Number(data.amountInr) || 0;
+    totalIncome += amount;
+    if (data.activatedAt?.toDate && indiaDateKeys(data.activatedAt.toDate()).month === monthKey) monthIncome += amount;
+  }
+
+  return {
+    members: { male: gender.Man, female: gender.Woman, newLast30Days: newMembersResult.data().count },
+    disability: { male: disability.Man, female: disability.Woman },
+    religions: Object.entries(religions).sort(([a], [b]) => a.localeCompare(b))
+      .map(([name, counts]) => ({ name, male: counts.Man, female: counts.Woman })),
+    premiumMembers,
+    visitors: { total: totalVisitorsResult.data().count, today: todayVisitorsResult.data().count },
+    income: { totalInr: totalIncome, monthInr: monthIncome, monthKey }
+  };
+});
+
+exports.recordSiteVisit = onCall({ maxInstances: 5 }, async request => {
+  const visitorId = String(request.data?.visitorId || '');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(visitorId)) {
+    throw new HttpsError('invalid-argument', 'A valid visitor identifier is required.');
+  }
+  const visitorKey = createHash('sha256').update(visitorId).digest('hex');
+  const { day } = indiaDateKeys();
+  const now = Timestamp.now();
+  const ip = String(request.rawRequest?.ip || 'unknown').slice(0, 120);
+  const rateKey = createHash('sha256').update(`${day}:${ip}`).digest('hex');
+  const visitorRef = db.collection('siteVisitors').doc(visitorKey);
+  const dayVisitRef = db.collection('siteVisitorDays').doc(`${day}_${visitorKey}`);
+  const rateRef = db.collection('siteVisitRateLimits').doc(rateKey);
+  await db.runTransaction(async tx => {
+    const [visitorSnap, dayVisitSnap, rateSnap] = await Promise.all([tx.get(visitorRef), tx.get(dayVisitRef), tx.get(rateRef)]);
+    if (visitorSnap.exists) tx.update(visitorRef, { lastSeenAt: now });
+    else tx.create(visitorRef, { firstSeenAt: now, lastSeenAt: now });
+    if (!dayVisitSnap.exists) {
+      const dailyNewVisitors = Number(rateSnap.data()?.count) || 0;
+      if (dailyNewVisitors >= 1000) throw new HttpsError('resource-exhausted', 'Daily visitor reporting limit reached.');
+      tx.create(dayVisitRef, { day, firstSeenAt: now });
+      tx.set(rateRef, { count: dailyNewVisitors + 1, updatedAt: now });
+    }
+  });
+  return { recorded: true };
+});
+
 exports.adminUpdateMember = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 5 }, async request => {
   requireAdmin(request);
   const uid = String(request.data?.uid || ''), profileInput = request.data?.profile || {}, privateInput = request.data?.privateProfile || {};
@@ -494,18 +617,41 @@ exports.adminActivatePremium = onCall({ secrets: [ADMIN_PASSWORD], maxInstances:
   const profileRef = db.collection('profiles').doc(uid);
   const subscriptionRef = db.collection('premiumSubscriptions').doc(uid);
   const requestRef = db.collection('premiumRequests').doc(uid);
+  const paymentRef = db.collection('premiumPayments').doc();
+  const legacyPaymentRef = db.collection('premiumPayments').doc(`legacy_${uid}`);
   const now = Timestamp.now();
   const activated = await db.runTransaction(async tx => {
-    const [profileSnap, subscriptionSnap, premiumRequestSnap] = await Promise.all([tx.get(profileRef), tx.get(subscriptionRef), tx.get(requestRef)]);
+    const [profileSnap, subscriptionSnap, premiumRequestSnap, legacyPaymentSnap] = await Promise.all([
+      tx.get(profileRef), tx.get(subscriptionRef), tx.get(requestRef), tx.get(legacyPaymentRef)
+    ]);
     if (!profileSnap.exists || !requiresPremium(profileSnap.data())) throw new HttpsError('not-found', 'Premium eligible member profile was not found.');
     const previous = subscriptionSnap.data()?.activeUntil;
     const start = previous && previous.toMillis() > now.toMillis() ? previous.toDate() : now.toDate();
     const activeUntil = addMonthsUtc(start, months);
+    if (!legacyPaymentSnap.exists) {
+      const requestData = premiumRequestSnap.data() || {}, subscriptionData = subscriptionSnap.data() || {};
+      const legacy = requestData.status === 'activated'
+        ? (!requestData.paymentLedgerId ? { amountInr: requestData.amountInr, planMonths: requestData.activatedPlanMonths || requestData.planMonths, paidAt: requestData.activatedAt } : null)
+        : subscriptionSnap.exists
+          ? { amountInr: subscriptionData.amountInr, planMonths: subscriptionData.planMonths, paidAt: subscriptionData.activatedAt }
+          : null;
+      if (legacy && Number(legacy.amountInr) > 0) tx.create(legacyPaymentRef, {
+        uid, amountInr: Number(legacy.amountInr), planMonths: Number(legacy.planMonths) || null,
+        paidAt: legacy.paidAt || now, source: 'legacy_migration', recordedBy: adminEmail
+      });
+    }
     tx.set(subscriptionRef, {
       uid, planMonths: months, amountInr: PREMIUM_PLANS[months], activeUntil,
       activatedAt: now, activatedBy: adminEmail, updatedAt: now
     });
-    if (premiumRequestSnap.exists) tx.update(requestRef, { status: 'activated', activatedAt: now, activatedBy: adminEmail, activatedPlanMonths: months, updatedAt: now });
+    tx.create(paymentRef, {
+      uid, planMonths: months, amountInr: PREMIUM_PLANS[months], paidAt: now,
+      recordedBy: adminEmail, source: premiumRequestSnap.exists ? 'payment_request' : 'manual_activation'
+    });
+    if (premiumRequestSnap.exists) tx.update(requestRef, {
+      status: 'activated', activatedAt: now, activatedBy: adminEmail,
+      activatedPlanMonths: months, paymentLedgerId: paymentRef.id, updatedAt: now
+    });
     return activeUntil.toMillis();
   });
   return { activeUntilMillis: activated };

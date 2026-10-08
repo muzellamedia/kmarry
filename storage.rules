@@ -6,8 +6,12 @@ service firebase.storage {
         && (!firestore.exists(/databases/(default)/documents/profiles/$(request.auth.uid))
           || firestore.get(/databases/(default)/documents/profiles/$(request.auth.uid)).data.get('blocked', false) != true);
     }
+    function visibleMember(uid) {
+      let profile = /databases/(default)/documents/profiles/$(uid);
+      return !firestore.exists(profile) || firestore.get(profile).data.get('blocked', false) != true;
+    }
     match /profilePhotos/{uid}/{fileName} {
-      allow read: if activeUser();
+      allow read: if activeUser() && visibleMember(uid);
       allow write: if activeUser()
         && request.auth.uid == uid
         && request.resource.size < 5 * 1024 * 1024

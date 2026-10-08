@@ -37,7 +37,7 @@ exports.listMatches = onCall({ maxInstances: 10 }, async request => {
   if (!viewer.religion) throw new HttpsError('failed-precondition', 'Select a religion in your profile to find matches.');
   const matches = await db.collection('profiles').where('religion', '==', viewer.religion).get();
   const profiles = matches.docs.filter(doc => doc.id !== request.auth.uid).map(doc => doc.data())
-    .filter(profile => !isDisabledProfile(viewer) || isDisabledProfile(profile));
+    .filter(profile => profile.blocked !== true && (!isDisabledProfile(viewer) || isDisabledProfile(profile)));
   return { profiles };
 });
 

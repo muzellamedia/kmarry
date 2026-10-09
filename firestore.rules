@@ -54,6 +54,11 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // Deleted profiles are retained for six months and served only by admin-authenticated Functions.
+    match /deletedProfiles/{uid} {
+      allow read, write: if false;
+    }
+
     match /premiumSubscriptions/{uid} {
       allow get: if signedIn() && request.auth.uid == uid;
       allow list, create, update, delete: if false;

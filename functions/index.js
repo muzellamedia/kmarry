@@ -4,6 +4,7 @@ const { initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 const { getFirestore, Timestamp, FieldPath } = require('firebase-admin/firestore');
 const { getStorage } = require('firebase-admin/storage');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { createHash, randomUUID, createHmac, timingSafeEqual } = require('node:crypto');
 
 initializeApp();
@@ -187,6 +188,82 @@ function serializeAdminRecord(data = {}) {
   return Object.fromEntries(Object.entries(data).map(([key, value]) => [key, value?.toMillis ? value.toMillis() : value]));
 }
 
+function addUtcMonths(date, months) {
+  const result = new Date(date), day = result.getUTCDate();
+  result.setUTCDate(1);
+  result.setUTCMonth(result.getUTCMonth() + months);
+  const lastDay = new Date(Date.UTC(result.getUTCFullYear(), result.getUTCMonth() + 1, 0)).getUTCDate();
+  result.setUTCDate(Math.min(day, lastDay));
+  return result;
+}
+
+function ownedProfilePhotoPath(photoUrl, uid) {
+  try {
+    const url = new URL(String(photoUrl || ''));
+    if (url.hostname !== 'firebasestorage.googleapis.com') return '';
+    const encodedPath = url.pathname.match(/\/o\/(.+)$/)?.[1] || '';
+    const objectPath = decodeURIComponent(encodedPath);
+    return objectPath.startsWith(`profilePhotos/${uid}/`) ? objectPath : '';
+  } catch { return ''; }
+}
+
+async function copyPrivateDeletedPhoto(photoUrl, uid) {
+  const sourcePath = ownedProfilePhotoPath(photoUrl, uid);
+  if (!sourcePath) return '';
+  const bucket = getStorage().bucket(), source = bucket.file(sourcePath);
+  const [exists] = await source.exists();
+  if (!exists) return '';
+  const destinationPath = `deletedProfilePhotos/${uid}/avatar`;
+  const destination = bucket.file(destinationPath);
+  await source.copy(destination);
+  await destination.setMetadata({ metadata: { firebaseStorageDownloadTokens: null }, cacheControl: 'private, no-store' });
+  return destinationPath;
+}
+
+async function archiveMemberData(uid) {
+  const profileRef = db.collection('profiles').doc(uid);
+  const privateRef = db.collection('privateProfiles').doc(uid);
+  const archiveRef = db.collection('deletedProfiles').doc(uid);
+  const [profileSnap, privateSnap, archiveSnap] = await Promise.all([profileRef.get(), privateRef.get(), archiveRef.get()]);
+  if (!profileSnap.exists || !privateSnap.exists) {
+    if (archiveSnap.exists) {
+      await deleteMemberData(uid);
+      return { retentionExpiresAtMillis: archiveSnap.data().retentionExpiresAt?.toMillis?.() || null };
+    }
+    throw new HttpsError('failed-precondition', 'The profile could not be archived. Contact support.');
+  }
+
+  const profile = profileSnap.data() || {}, privateProfile = privateSnap.data() || {};
+  const deletedAt = Timestamp.now();
+  const retentionExpiresAt = Timestamp.fromDate(addUtcMonths(deletedAt.toDate(), 6));
+  const photoPath = await copyPrivateDeletedPhoto(profile.photoUrl, uid);
+  const archivedProfile = { ...profile, photoUrl: '' };
+  const phone = privateProfile.phone;
+  const phoneAccountRef = phone ? db.collection('phoneAccounts').doc(createHash('sha256').update(phone).digest('hex')) : null;
+  await db.runTransaction(async tx => {
+    const [latestArchive, latestProfile, latestPrivate, account] = await Promise.all([
+      tx.get(archiveRef), tx.get(profileRef), tx.get(privateRef),
+      phoneAccountRef ? tx.get(phoneAccountRef) : Promise.resolve(null)
+    ]);
+    if (latestArchive.exists) return;
+    if (!latestProfile.exists || !latestPrivate.exists) throw new HttpsError('failed-precondition', 'The profile changed while it was being deleted. Try again.');
+    tx.create(archiveRef, {
+      uid, profile: archivedProfile, privateProfile,
+      deletedAt, retentionExpiresAt, photoPath,
+      retentionPurpose: 'Safety and legal requests', retentionMonths: 6
+    });
+    if (account?.exists && account.data().uid === uid) tx.delete(phoneAccountRef);
+    tx.delete(profileRef);
+    tx.delete(privateRef);
+    tx.delete(db.collection('premiumRequests').doc(uid));
+    tx.delete(db.collection('premiumSubscriptions').doc(uid));
+  });
+
+  // Reuse the existing cleanup for interests, payment records, public photos, and Auth.
+  await deleteMemberData(uid);
+  return { retentionExpiresAtMillis: retentionExpiresAt.toMillis() };
+}
+
 async function deleteMemberData(uid) {
   const privateRef = db.collection('privateProfiles').doc(uid);
   const privateSnap = await privateRef.get();
@@ -315,8 +392,70 @@ exports.getPremiumStatus = onCall({ maxInstances: 10 }, async request => {
 
 exports.deleteMyAccount = onCall({ maxInstances: 5 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in before deleting your account.');
-  await deleteMemberData(request.auth.uid);
-  return { deleted: true };
+  const result = await archiveMemberData(request.auth.uid);
+  return { deleted: true, retentionExpiresAtMillis: result.retentionExpiresAtMillis };
+});
+
+exports.adminListDeletedProfiles = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 3 }, async request => {
+  requireAdmin(request);
+  const cursor = typeof request.data?.cursor === 'string' ? request.data.cursor : '';
+  const now = Timestamp.now();
+  let query = db.collection('deletedProfiles').orderBy('deletedAt', 'desc').orderBy(FieldPath.documentId()).limit(50);
+  if (cursor) {
+    const previous = await db.collection('deletedProfiles').doc(cursor).get();
+    if (previous.exists) query = query.startAfter(previous.data().deletedAt, previous.id);
+  }
+  const page = await query.get();
+  const profiles = page.docs.filter(item => item.data().retentionExpiresAt?.toMillis?.() > now.toMillis()).map(item => {
+    const data = item.data(), profile = data.profile || {}, privateProfile = data.privateProfile || {};
+    return {
+      uid: item.id, name: profile.name || '', age: Number(profile.age) || null, gender: profile.gender || '',
+      phone: privateProfile.contactPhone || privateProfile.phone || '', location: profile.location || [profile.district, profile.state].filter(Boolean).join(', '),
+      deletedAtMillis: data.deletedAt?.toMillis?.() || null, retentionExpiresAtMillis: data.retentionExpiresAt?.toMillis?.() || null
+    };
+  });
+  return { profiles, nextCursor: page.size === 50 ? page.docs[page.docs.length - 1].id : null };
+});
+
+exports.adminGetDeletedProfile = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 3 }, async request => {
+  requireAdmin(request);
+  const uid = String(request.data?.uid || '');
+  if (!uid || uid.length > 128 || uid.includes('/')) throw new HttpsError('invalid-argument', 'Choose a valid deleted profile.');
+  const snapshot = await db.collection('deletedProfiles').doc(uid).get();
+  if (!snapshot.exists) throw new HttpsError('not-found', 'The deleted profile is no longer available.');
+  const record = snapshot.data(), expiresAt = record.retentionExpiresAt?.toMillis?.() || 0;
+  if (expiresAt <= Date.now()) throw new HttpsError('not-found', 'The six-month retention period has ended.');
+  let photoUrl = '';
+  if (record.photoPath) {
+    try {
+      const [url] = await getStorage().bucket().file(record.photoPath).getSignedUrl({ action: 'read', expires: Date.now() + 10 * 60 * 1000 });
+      photoUrl = url;
+    } catch { /* A deleted profile remains viewable if its original photo is unavailable. */ }
+  }
+  return {
+    uid, profile: serializeAdminRecord(record.profile || {}),
+    privateProfile: serializeAdminRecord(record.privateProfile || {}),
+    deletedAtMillis: record.deletedAt?.toMillis?.() || null,
+    retentionExpiresAtMillis: expiresAt, photoUrl
+  };
+});
+
+exports.purgeExpiredDeletedProfiles = onSchedule({ schedule: 'every 24 hours', timeZone: 'Asia/Kolkata', maxInstances: 1 }, async () => {
+  const now = Timestamp.now(), bucket = getStorage().bucket();
+  while (true) {
+    const page = await db.collection('deletedProfiles').where('retentionExpiresAt', '<=', now).orderBy('retentionExpiresAt').limit(100).get();
+    if (page.empty) break;
+    for (const archived of page.docs) {
+      const photoPath = String(archived.data().photoPath || '');
+      if (photoPath.startsWith(`deletedProfilePhotos/${archived.id}/`)) {
+        await bucket.deleteFiles({ prefix: `deletedProfilePhotos/${archived.id}/` }).catch(error => {
+          if (error.code !== 404 && error.code !== '404') throw error;
+        });
+      }
+      await archived.ref.delete();
+    }
+    if (page.size < 100) break;
+  }
 });
 
 exports.adminListMembers = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 5 }, async request => {

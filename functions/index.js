@@ -494,8 +494,8 @@ exports.adminListMembers = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 5 }
         filter === 'payment' ? Promise.resolve(item) : db.collection('premiumRequests').doc(uid).get(),
         db.collection('premiumSubscriptions').doc(uid).get()
       ]);
-      if (!profileSnap.exists || !privateSnap.exists) return null;
-      const profile = profileSnap.data() || {}, privateProfile = privateSnap.data() || {}, premiumRequest = requestSnap.data() || {}, subscription = subscriptionSnap.data() || {};
+      if (!privateSnap.exists || (filter === 'payment' && !profileSnap.exists)) return null;
+      const profile = profileSnap.exists ? profileSnap.data() || {} : {}, privateProfile = privateSnap.data() || {}, premiumRequest = requestSnap.data() || {}, subscription = subscriptionSnap.data() || {};
       const premiumActive = Boolean(subscription.activeUntil && subscription.activeUntil.toMillis() > now);
       const createdAtMillis = privateProfile.createdAt?.toMillis?.() || authCreationByUid.get(uid) || 0;
       const phoneDigits = [privateProfile.contactPhone, privateProfile.phone].map(value => String(value || '').replace(/\D/g, ''));
@@ -517,6 +517,7 @@ exports.adminListMembers = onCall({ secrets: [ADMIN_PASSWORD], maxInstances: 5 }
         activeUntilMillis: subscription.activeUntil?.toMillis?.() || null,
         premiumActive,
         blocked: profile.blocked === true,
+        profileComplete: profileSnap.exists,
         profile: serializeAdminRecord(profile),
         privateProfile: serializeAdminRecord(privateProfile),
         cursorId: uid
